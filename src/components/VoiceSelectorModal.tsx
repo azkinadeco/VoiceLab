@@ -99,35 +99,46 @@ export default function VoiceSelectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative flex flex-col w-full max-w-5xl max-h-[88vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/15 shadow-2xl">
+    <div
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="m-sheet relative flex flex-col w-full max-w-5xl max-h-[88vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/15 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 bg-dark-950/50">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4 bg-dark-950/50">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-bold text-white flex flex-wrap items-center gap-x-2.5 gap-y-1">
               Voice & Accent Library
               <span className="rounded-full bg-brand-500/20 border border-brand-500/30 px-2.5 py-0.5 text-xs font-semibold text-brand-300">
                 {voices.length} Suara Neural
               </span>
             </h2>
-            <p className="text-xs text-dark-300 mt-0.5">
+            <p className="hidden sm:block text-xs text-dark-300 mt-0.5">
               Pilih aksen bahasa dan klik tombol Sample untuk mendengarkan logat asli suara neural
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             <button
               onClick={() => {
                 onClose();
                 onOpenVoiceLab();
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-brand-500 transition-colors shadow-sm"
+              aria-label="Clone Suara Sendiri"
+              className="flex h-10 sm:h-auto items-center gap-1.5 rounded-xl bg-brand-600 px-3 sm:px-3.5 py-2 text-xs font-bold text-white hover:bg-brand-500 transition-colors shadow-sm"
             >
               <UserPlus className="h-4 w-4" />
-              Clone Suara Sendiri
+              <span className="hidden sm:inline">Clone Suara Sendiri</span>
+              <span className="sm:hidden">Clone</span>
             </button>
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
+              aria-label="Tutup"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -135,23 +146,23 @@ export default function VoiceSelectorModal({
         </div>
 
         {/* Search & Accent Filter Bar */}
-        <div className="border-b border-white/10 px-6 py-3.5 bg-dark-950/30 space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
+        <div className="shrink-0 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-3.5 bg-dark-950/30 space-y-3">
+          <div className="flex flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
               <input
                 type="text"
                 placeholder="Cari nama suara, aksen (Jawa, Sunda, British, Jepang, Arab), atau fungsi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl bg-dark-850 border border-white/10 pl-10 pr-4 py-2.5 text-sm text-white placeholder-dark-400 focus:border-brand-500 focus:outline-none"
+                className="w-full rounded-xl bg-dark-850 border border-white/10 pl-10 pr-4 py-2.5 text-base sm:text-sm text-white placeholder-dark-400 focus:border-brand-500 focus:outline-none"
               />
             </div>
 
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value as any)}
-              className="rounded-xl bg-dark-850 border border-white/10 px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brand-500 shrink-0"
+              className="rounded-xl bg-dark-850 border border-white/10 px-2.5 sm:px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brand-500 shrink-0"
             >
               <option value="all">Semua Gender</option>
               <option value="male">Pria (Male)</option>
@@ -160,7 +171,7 @@ export default function VoiceSelectorModal({
           </div>
 
           {/* All Accent Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             {ACCENT_CATEGORIES.map((acc) => (
               <button
                 key={acc.id}
@@ -189,7 +200,7 @@ export default function VoiceSelectorModal({
         </div>
 
         {/* Voices Grid */}
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 grid content-start grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredVoices.map((voice) => {
             const isSelected = voice.id === selectedVoiceId;
             const isPlaying = playingVoiceId === voice.id;
@@ -209,11 +220,11 @@ export default function VoiceSelectorModal({
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <img
                         src={voice.avatarUrl}
                         alt={voice.name}
-                        className="h-12 w-12 rounded-full object-cover border border-white/20 shadow-md"
+                        className="h-12 w-12 shrink-0 rounded-full object-cover border border-white/20 shadow-md"
                       />
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -232,7 +243,7 @@ export default function VoiceSelectorModal({
 
                     <button
                       onClick={(e) => playNeuralPreview(voice, e)}
-                      className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold border transition-all ${
+                      className={`flex h-10 sm:h-auto shrink-0 items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold border transition-all ${
                         isPlaying
                           ? 'bg-brand-500 border-brand-300 text-white animate-pulse'
                           : 'bg-dark-900 border-white/15 text-dark-200 hover:bg-dark-750 hover:text-white'

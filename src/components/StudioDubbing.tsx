@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import AudioWaveVisualizer from './AudioWaveVisualizer';
 import TooltipInfo from './TooltipInfo';
+import PageHeader from './PageHeader';
+import { toast } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 
 interface StudioDubbingProps {
   voices: Voice[];
@@ -119,7 +122,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
       setMasterGeneration(data.generation);
       onGenerationCreated(data.generation);
     } catch (err: any) {
-      alert('Gagal me-render studio: ' + err.message);
+      toast('Gagal me-render studio: ' + err.message, 'error');
     } finally {
       setIsRendering(false);
     }
@@ -182,7 +185,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
       setTranslatedText(data.dubbing.translatedText);
       onGenerationCreated(data.generation);
     } catch (e: any) {
-      alert('Dubbing error: ' + e.message);
+      toast('Dubbing gagal: ' + e.message, 'error');
     } finally {
       setIsDubbing(false);
     }
@@ -211,56 +214,66 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
   };
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Compact Header & Mode Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-white">Studio & AI Dubbing</h1>
+    <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto">
+      <PageHeader
+        title="Studio & AI Dubbing"
+        mobileTitle="Studio Dubbing"
+        subtitle="Gabungkan dialog banyak pembicara atau sulih suara ke bahasa lain."
+        titleAddon={
           <TooltipInfo
             title="Multi-Track & Dubbing"
             text="Susun dialog banyak pembicara menjadi satu Master MP3, atau terjemahkan & sulih suara naskah ke 10+ bahasa lengkap dengan subtitle .SRT."
             position="right"
           />
-        </div>
+        }
+      />
 
-        <div className="flex rounded-xl bg-dark-900 p-1 border border-white/10">
-          <button
-            onClick={() => setStudioMode('multitrack')}
-            className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all ${
-              studioMode === 'multitrack'
-                ? 'bg-amber-500 text-black shadow'
-                : 'text-dark-300 hover:text-white'
-            }`}
-          >
-            Multi-Speaker Dialog
-          </button>
-          <button
-            onClick={() => setStudioMode('localization')}
-            className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
-              studioMode === 'localization'
-                ? 'bg-amber-500 text-black shadow'
-                : 'text-dark-300 hover:text-white'
-            }`}
-          >
-            <Globe className="h-3.5 w-3.5" />
-            AI Dubbing & SRT
-          </button>
-        </div>
+      <div className="grid grid-cols-2 sm:inline-grid rounded-xl bg-dark-900 p-1 border border-white/10 w-full sm:w-auto">
+        <button
+          onClick={() => {
+            haptic();
+            setStudioMode('multitrack');
+          }}
+          className={`h-10 sm:h-auto rounded-lg px-3 sm:px-4 sm:py-1.5 text-[13px] sm:text-xs font-bold transition-all ${
+            studioMode === 'multitrack'
+              ? 'bg-amber-500 text-black shadow'
+              : 'text-dark-300 hover:text-white'
+          }`}
+        >
+          Dialog Multi-Speaker
+        </button>
+        <button
+          onClick={() => {
+            haptic();
+            setStudioMode('localization');
+          }}
+          className={`h-10 sm:h-auto rounded-lg px-3 sm:px-4 sm:py-1.5 text-[13px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            studioMode === 'localization'
+              ? 'bg-amber-500 text-black shadow'
+              : 'text-dark-300 hover:text-white'
+          }`}
+        >
+          <Globe className="h-3.5 w-3.5" />
+          Dubbing & SRT
+        </button>
       </div>
 
       {studioMode === 'multitrack' ? (
         <>
-          <div className="studio-card rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="studio-card rounded-2xl p-4 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-semibold text-dark-200">Judul Proyek</label>
+              <span className="text-xs text-dark-300 shrink-0">
+                {blocks.length} baris dialog
+              </span>
+            </div>
             <input
               type="text"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
               placeholder="Judul Episode Studio..."
-              className="flex-1 rounded-xl bg-dark-850 border border-white/10 px-3.5 py-2 text-xs font-bold text-white focus:outline-none focus:border-amber-500"
+              className="w-full min-w-0 h-11 sm:h-auto rounded-xl bg-dark-850 border border-white/10 px-3.5 sm:py-2 text-xs font-bold text-white focus:outline-none focus:border-amber-500"
             />
-            <span className="text-xs text-dark-300 shrink-0 font-mono">
-              {blocks.length} Baris Dialog
-            </span>
           </div>
 
           <div className="space-y-3">
@@ -271,9 +284,9 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                   key={block.id}
                   className="studio-card rounded-2xl p-4 space-y-3 hover:border-white/20 transition-all"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-300 text-xs font-mono font-bold">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-2 min-w-0 sm:flex-1">
+                      <span className="flex h-8 w-8 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
                         {index + 1}
                       </span>
                       <input
@@ -282,20 +295,35 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                         onChange={(e) =>
                           updateBlock(block.id, { characterName: e.target.value })
                         }
-                        className="rounded-lg bg-dark-850 border border-white/10 px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:border-amber-500 w-36"
+                        aria-label="Nama karakter"
+                        className="flex-1 min-w-0 h-10 sm:h-auto sm:flex-none sm:w-40 rounded-lg bg-dark-850 border border-white/10 px-2.5 sm:py-1 text-xs font-bold text-white focus:outline-none focus:border-amber-500"
                       />
+                      {blocks.length > 1 && (
+                        <button
+                          onClick={() => {
+                            haptic();
+                            removeBlock(block.id);
+                          }}
+                          className="sm:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-dark-400 hover:text-rose-400 hover:bg-rose-500/10 border border-white/10"
+                          title="Hapus baris"
+                          aria-label="Hapus baris"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <img
                         src={currentVoice?.avatarUrl}
                         alt={currentVoice?.name}
-                        className="h-6 w-6 rounded-full object-cover border border-white/15"
+                        className="h-8 w-8 sm:h-6 sm:w-6 shrink-0 rounded-full object-cover border border-white/15"
                       />
                       <select
                         value={block.voiceId}
                         onChange={(e) => updateBlock(block.id, { voiceId: e.target.value })}
-                        className="rounded-lg bg-dark-850 border border-white/10 px-2.5 py-1 text-xs font-semibold text-white focus:outline-none"
+                        aria-label="Pilih suara"
+                        className="flex-1 sm:flex-none min-w-0 w-full sm:w-auto h-10 sm:h-auto rounded-lg bg-dark-850 border border-white/10 px-2.5 sm:py-1 text-xs font-semibold text-white focus:outline-none"
                       >
                         {voices.map((v) => (
                           <option key={v.id} value={v.id}>
@@ -307,8 +335,9 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                       {blocks.length > 1 && (
                         <button
                           onClick={() => removeBlock(block.id)}
-                          className="p-1.5 rounded-lg text-dark-400 hover:text-rose-400 hover:bg-rose-500/10"
+                          className="hidden sm:flex p-1.5 shrink-0 rounded-lg text-dark-400 hover:text-rose-400 hover:bg-rose-500/10"
                           title="Hapus baris"
+                          aria-label="Hapus baris"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -317,11 +346,11 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                   </div>
 
                   <textarea
-                    rows={2}
+                    rows={3}
                     placeholder={`Dialog ${block.characterName}...`}
                     value={block.text}
                     onChange={(e) => updateBlock(block.id, { text: e.target.value })}
-                    className="w-full rounded-xl bg-dark-950/60 border border-white/10 p-3 text-sm text-white placeholder-dark-400 focus:border-amber-500 focus:outline-none resize-none"
+                    className="w-full rounded-xl bg-dark-950/60 border border-white/10 p-3 text-sm text-white placeholder-dark-400 focus:border-amber-500 focus:outline-none resize-y min-h-[88px] leading-relaxed"
                   />
 
                   {block.audioUrl && (
@@ -337,8 +366,11 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
             })}
 
             <button
-              onClick={addBlock}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-dark-900/50 py-2.5 text-xs font-semibold text-dark-300 hover:text-white hover:border-amber-500/50 transition-all"
+              onClick={() => {
+                haptic();
+                addBlock();
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-dark-900/50 h-11 sm:h-auto sm:py-2.5 text-[13px] sm:text-xs font-semibold text-dark-300 hover:text-white hover:border-amber-500/50 transition-all"
             >
               <Plus className="h-4 w-4" />
               Tambah Pembicara
@@ -348,14 +380,14 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
           <button
             onClick={handleGenerateStudio}
             disabled={isRendering}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-xs font-bold text-black shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500 transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl sm:rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 h-12 sm:h-auto sm:py-3 text-sm sm:text-xs font-bold text-black shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500 transition-all disabled:opacity-50"
           >
             <Wand2 className="h-4 w-4" />
-            {isRendering ? 'Menggabungkan Master Track...' : 'Render Master Track Multi-Speaker'}
+            {isRendering ? 'Menggabungkan Master Track...' : 'Render Master Track'}
           </button>
 
           {masterGeneration && (
-            <div className="studio-card rounded-2xl border-amber-500/40 p-5 space-y-3">
+            <div className="studio-card rounded-2xl border-amber-500/40 p-4 sm:p-5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4" />
@@ -364,7 +396,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleDownloadAllStems}
-                    className="flex items-center gap-1.5 rounded-lg bg-dark-850 hover:bg-dark-800 border border-white/10 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 h-9 sm:h-auto rounded-lg bg-dark-850 hover:bg-dark-800 border border-white/10 px-2.5 sm:py-1 text-xs font-semibold text-amber-300 hover:text-white transition-colors"
                     title="Unduh seluruh track vokal masing-masing pembicara secara terpisah"
                   >
                     <Download className="h-3 w-3" />
@@ -387,7 +419,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
       ) : (
         /* AI Dubbing & Auto-Translation Studio */
         <div className="space-y-5">
-          <div className="studio-card rounded-2xl p-6 space-y-5">
+          <div className="studio-card rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
               <div>
                 <label className="block text-xs font-semibold text-dark-200 mb-1.5">
@@ -396,7 +428,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                 <select
                   value={sourceLang}
                   onChange={(e) => setSourceLang(e.target.value)}
-                  className="w-full rounded-xl bg-dark-850 border border-white/10 px-3 py-2.5 text-xs font-semibold text-white"
+                  className="w-full rounded-xl bg-dark-850 border border-white/10 px-3 h-11 sm:h-auto sm:py-2.5 text-xs font-semibold text-white"
                 >
                   {TARGET_LANGUAGES.map((l) => (
                     <option key={l} value={l}>
@@ -406,15 +438,15 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                 </select>
               </div>
 
-              <div className="flex justify-center pt-4">
+              <div className="flex justify-center md:pt-4">
                 <button
                   onClick={() => handleAutoTranslate()}
                   disabled={isTranslating}
-                  className="flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 px-3.5 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition-all"
+                  className="w-full md:w-auto h-11 md:h-auto flex items-center justify-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 px-3.5 md:py-2 text-[13px] md:text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition-all"
                   title="Terjemahkan otomatis ke bahasa target"
                 >
                   <Languages className="h-4 w-4" />
-                  {isTranslating ? 'Menerjemahkan...' : 'Terjemahkan Otomatis →'}
+                  {isTranslating ? 'Menerjemahkan...' : 'Terjemahkan Otomatis'}
                 </button>
               </div>
 
@@ -425,7 +457,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
                 <select
                   value={targetLang}
                   onChange={(e) => handleTargetLangChange(e.target.value)}
-                  className="w-full rounded-xl bg-dark-850 border border-amber-500/40 px-3 py-2.5 text-xs font-semibold text-white"
+                  className="w-full rounded-xl bg-dark-850 border border-amber-500/40 px-3 h-11 sm:h-auto sm:py-2.5 text-xs font-semibold text-white"
                 >
                   {TARGET_LANGUAGES.map((l) => (
                     <option key={l} value={l}>
@@ -471,12 +503,12 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-              <div className="flex items-center gap-2.5 flex-1">
-                <span className="text-xs font-semibold text-dark-300 shrink-0">Aktor Suara:</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
+                <span className="text-xs font-semibold text-dark-200 sm:text-dark-300 shrink-0">Aktor Suara</span>
                 <select
                   value={dubVoiceId}
                   onChange={(e) => setDubVoiceId(e.target.value)}
-                  className="flex-1 rounded-xl bg-dark-850 border border-white/10 px-3 py-2 text-xs font-semibold text-white"
+                  className="w-full sm:flex-1 min-w-0 h-11 sm:h-auto rounded-xl bg-dark-850 border border-white/10 px-3 sm:py-2 text-xs font-semibold text-white"
                 >
                   {voices.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -489,7 +521,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
               <button
                 onClick={handleRunDubbing}
                 disabled={isDubbing || !sourceText.trim()}
-                className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-2.5 text-xs font-bold text-black shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500 transition-all disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl sm:rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 h-12 sm:h-auto sm:py-2.5 text-sm sm:text-xs font-bold text-black shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500 transition-all disabled:opacity-50"
               >
                 <Globe className="h-4 w-4" />
                 {isDubbing ? 'Menyulih Suara...' : 'Generate Dubbing & SRT'}
@@ -498,19 +530,19 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
           </div>
 
           {dubResult && dubResult.audioUrl && (
-            <div className="studio-card rounded-2xl border-amber-500/40 p-5 space-y-3">
+            <div className="studio-card rounded-2xl border-amber-500/40 p-4 sm:p-5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4" />
                   Dubbing Selesai ({dubResult.sourceLanguage} → {dubResult.targetLanguage})
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   {dubResult.srtContent && (
                     <>
                       <button
                         onClick={() => setShowSrtPreview(!showSrtPreview)}
-                        className="flex items-center gap-1 rounded-lg bg-dark-850 border border-white/10 px-2.5 py-1.5 text-xs text-dark-200 hover:text-white"
+                        className="flex-1 sm:flex-none h-10 sm:h-auto justify-center flex items-center gap-1 rounded-lg bg-dark-850 border border-white/10 px-2.5 sm:py-1.5 text-xs text-dark-200 hover:text-white"
                       >
                         {showSrtPreview ? (
                           <ChevronUp className="h-3.5 w-3.5" />
@@ -522,7 +554,7 @@ export default function StudioDubbing({ voices, onGenerationCreated }: StudioDub
 
                       <button
                         onClick={() => downloadSrtFile(dubResult.srtContent!, dubResult.id)}
-                        className="flex items-center gap-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30"
+                        className="flex-1 sm:flex-none h-10 sm:h-auto justify-center flex items-center gap-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 px-3 sm:py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Download .SRT

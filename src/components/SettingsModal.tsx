@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings } from '@/lib/types';
 import { X, HardDrive, Key, Sliders, Check, Folder, Info, Moon } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -36,10 +37,10 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
       if (data.success) {
         setStats(data.stats);
         if (onSettingsSaved) onSettingsSaved();
-        alert(`Berhasil membebaskan ruang disk. ${data.removedCount} file audio berhasil dibersihkan.`);
+        toast(`Berhasil membebaskan ruang disk. ${data.removedCount} file audio berhasil dibersihkan.`);
       }
     } catch {
-      alert('Gagal membersihkan cache storage.');
+      toast('Gagal membersihkan cache storage.', 'error');
     } finally {
       setIsClearing(false);
     }
@@ -83,32 +84,42 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
+        toast('Pengaturan berhasil disimpan');
         if (onSettingsSaved) onSettingsSaved();
       }
     } catch (e) {
-      alert('Gagal menyimpan pengaturan');
+      toast('Gagal menyimpan pengaturan', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <Sliders className="h-5 w-5 text-brand-400" />
-            <h2 className="text-lg font-semibold text-white">Pengaturan & Penyimpanan PC</h2>
+    <div
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="m-sheet relative flex flex-col w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Sliders className="h-5 w-5 shrink-0 text-brand-400" />
+            <h2 className="truncate text-base sm:text-lg font-bold sm:font-semibold text-white">Pengaturan & Penyimpanan PC</h2>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
+            aria-label="Tutup"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 sm:max-h-[70vh]">
           {/* Storage on PC Section */}
           <div className="rounded-xl bg-dark-950 p-4 border border-white/5 space-y-3">
             <div className="flex items-center justify-between">
@@ -141,7 +152,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                 type="button"
                 onClick={handleClearCache}
                 disabled={isClearing}
-                className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 shrink-0"
+                className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-2 sm:py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 shrink-0"
               >
                 {isClearing ? 'Membersihkan...' : 'Kosongkan Cache Audio'}
               </button>
@@ -149,7 +160,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
           </div>
 
           {/* OLED Theme Toggle */}
-          <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex items-center justify-between">
+          <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <Moon className="h-4 w-4 text-amber-400" />
               <div>
@@ -240,7 +251,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                         placeholder="xi-api-key (cth: sk_...)"
                         value={elevenApiKey}
                         onChange={(e) => setElevenApiKey(e.target.value)}
-                        className="w-full rounded-lg bg-dark-900 border border-white/10 px-3 py-1.5 text-xs text-white placeholder-dark-500 focus:outline-none focus:border-brand-500"
+                        className="w-full rounded-lg bg-dark-900 border border-white/10 px-3 py-2.5 sm:py-1.5 text-base sm:text-xs text-white placeholder-dark-500 focus:outline-none focus:border-brand-500"
                       />
                     </div>
                   )}
@@ -250,8 +261,8 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/10 px-6 py-4 bg-dark-950/60">
-          <div className="text-xs text-emerald-400 flex items-center gap-1.5">
+        <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-white/10 px-4 sm:px-6 py-3 sm:py-4 bg-dark-950/60">
+          <div className="hidden sm:flex text-xs text-emerald-400 items-center gap-1.5">
             {saveSuccess && (
               <>
                 <Check className="h-4 w-4" />
@@ -259,17 +270,17 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
               </>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-2">
             <button
               onClick={onClose}
-              className="rounded-lg bg-dark-800 px-3.5 py-2 text-xs font-medium text-dark-300 hover:text-white transition-colors"
+              className="flex-1 sm:flex-none h-12 sm:h-auto rounded-2xl sm:rounded-lg bg-dark-800 px-3.5 py-2 text-sm sm:text-xs font-medium text-dark-300 hover:text-white transition-colors"
             >
               Batal
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-400 transition-colors disabled:opacity-50"
+              className="flex-1 sm:flex-none h-12 sm:h-auto rounded-2xl sm:rounded-lg bg-brand-500 px-4 py-2 text-sm sm:text-xs font-semibold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-400 transition-colors disabled:opacity-50"
             >
               {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
             </button>

@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar, { ActiveTab } from '@/components/Sidebar';
 import Header from '@/components/Header';
-import IosBottomTabBar from '@/components/IosBottomTabBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import MoreSheet from '@/components/MoreSheet';
+import Toaster from '@/components/Toaster';
 import MobileVoiceSheetModal from '@/components/MobileVoiceSheetModal';
 import TextToSpeech from '@/components/TextToSpeech';
 import VoiceLab from '@/components/VoiceLab';
@@ -40,6 +41,7 @@ export default function Home() {
   const [devicePreviewMode, setDevicePreviewMode] = useState<'desktop' | 'iphone' | 'android'>('desktop');
   const [isMobileVoiceSheetOpen, setIsMobileVoiceSheetOpen] = useState<boolean>(false);
   const [isAndroidUser, setIsAndroidUser] = useState<boolean>(false);
+  const [isMoreOpen, setIsMoreOpen] = useState<boolean>(false);
 
   // Modals state
   const [isVoiceSelectorOpen, setIsVoiceSelectorOpen] = useState(false);
@@ -96,6 +98,13 @@ export default function Home() {
       setIsAndroidUser(true);
     }
 
+    // Deep link: /?tab=studio (used by PWA shortcuts & screenshots)
+    const tabParam = new URLSearchParams(window.location.search).get('tab') as ActiveTab | null;
+    const validTabs: ActiveTab[] = ['tts', 'voicelab', 'speech2speech', 'sfx', 'isolator', 'studio', 'agents', 'projects', 'batch', 'analytics', 'history'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+
     refreshAllData();
 
     return () => {
@@ -116,6 +125,12 @@ export default function Home() {
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't hijack swipes that start inside horizontal scrollers, sliders or text fields
+    const target = e.target as HTMLElement;
+    if (target.closest('.overflow-x-auto, input, textarea, select, [data-no-swipe]')) {
+      touchStartRef.current = null;
+      return;
+    }
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
@@ -130,7 +145,7 @@ export default function Home() {
 
     // Detect horizontal swipe with minimum threshold and angle check
     if (Math.abs(deltaX) > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
-      const hubs: ActiveTab[] = ['tts', 'voicelab', 'speech2speech', 'studio', 'history'];
+      const hubs: ActiveTab[] = ['tts', 'voicelab', 'studio', 'history'];
       const currentIndex = hubs.indexOf(activeTab);
       if (currentIndex !== -1) {
         if (deltaX < 0 && currentIndex < hubs.length - 1) {
@@ -262,6 +277,25 @@ export default function Home() {
 
   const customVoices = voices.filter((v) => v.category === 'cloned' || v.category === 'designed');
 
+  const openTrimmer = (url: string, duration: number, fileName = 'audio.mp3') =>
+    setTrimmerState({ isOpen: true, url, duration, fileName });
+
+  const renderMoreSheet = (insideFrame: boolean) => (
+    <MoreSheet
+      isOpen={isMoreOpen}
+      onClose={() => setIsMoreOpen(false)}
+      activeTab={activeTab}
+      onSelectTab={setActiveTab}
+      onOpenPronunciation={() => setIsPronunciationOpen(true)}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+      onOpenInstall={() => setIsInstallModalOpen(true)}
+      isOled={isOled}
+      onToggleOled={toggleOledTheme}
+      diskUsage={storageStats?.diskUsageFormatted}
+      insideFrame={insideFrame}
+    />
+  );
+
   const renderActiveView = (inMobile = false) => (
     <>
       {activeTab === 'tts' && (
@@ -280,6 +314,7 @@ export default function Home() {
           onGenerationCreated={handleGenerationCreated}
           isIphoneMode={inMobile}
           loadedGeneration={reuseGen}
+          onOpenTrimmer={openTrimmer}
         />
       )}
 
@@ -353,13 +388,15 @@ export default function Home() {
           onToggleStar={handleToggleStar}
           onRefresh={loadHistory}
           onReuseGeneration={handleReuseGeneration}
+          onOpenTrimmer={openTrimmer}
         />
       )}
     </>
   );
 
   return (
-    <div className="min-h-screen bg-dark-950 text-white">
+    <div className="min-h-dvh-screen bg-dark-950 text-white">
+      <Toaster />
       {devicePreviewMode !== 'desktop' ? (
         /* INTERACTIVE SMARTPHONE SIMULATOR VIEW (iPhone 16 Pro vs Android Galaxy S25) */
         <div className="min-h-screen flex flex-col items-center justify-center p-3 sm:p-4 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950">
@@ -435,10 +472,11 @@ export default function Home() {
                 onOpenSpotlight={() => setIsCommandPaletteOpen(true)}
                 isOled={isOled}
                 onToggleOledTheme={toggleOledTheme}
+                insideFrame
               />
 
               {/* iOS Scrollable App Content */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-4 no-scrollbar">
+              <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 no-scrollbar">
                 {renderActiveView(true)}
               </div>
 
@@ -462,7 +500,10 @@ export default function Home() {
                 platform="ios"
                 totalGenerations={storageStats?.totalGenerations || generations.length}
                 insideFrame
+                onOpenMore={() => setIsMoreOpen(true)}
+                isMoreOpen={isMoreOpen}
               />
+              {renderMoreSheet(true)}
             </div>
           ) : (
             /* Android Galaxy S25 / Pixel 9 Material You 3 Frame + Punch Hole Camera */
@@ -498,10 +539,11 @@ export default function Home() {
                 onOpenSpotlight={() => setIsCommandPaletteOpen(true)}
                 isOled={isOled}
                 onToggleOledTheme={toggleOledTheme}
+                insideFrame
               />
 
               {/* Android Scrollable App Content */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-4 no-scrollbar">
+              <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 no-scrollbar">
                 {renderActiveView(true)}
               </div>
 
@@ -525,7 +567,10 @@ export default function Home() {
                 platform="android"
                 totalGenerations={storageStats?.totalGenerations || generations.length}
                 insideFrame
+                onOpenMore={() => setIsMoreOpen(true)}
+                isMoreOpen={isMoreOpen}
               />
+              {renderMoreSheet(true)}
             </div>
           )}
         </div>
@@ -557,7 +602,7 @@ export default function Home() {
           <div
             className={`flex-1 transition-all duration-300 ${
               isSidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-56'
-            } flex flex-col min-w-0 pb-24 lg:pb-20`}
+            } flex flex-col min-w-0 mobile-content-pad`}
           >
             <Header
               activeTab={activeTab}
@@ -576,7 +621,7 @@ export default function Home() {
               onToggleOledTheme={toggleOledTheme}
             />
 
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+            <main className="flex-1 px-4 pt-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
               {renderActiveView(false)}
             </main>
           </div>
@@ -599,7 +644,10 @@ export default function Home() {
             onTabChange={setActiveTab}
             platform={isAndroidUser ? 'android' : 'ios'}
             totalGenerations={storageStats?.totalGenerations || generations.length}
+            onOpenMore={() => setIsMoreOpen(true)}
+            isMoreOpen={isMoreOpen}
           />
+          {renderMoreSheet(false)}
         </div>
       )}
 

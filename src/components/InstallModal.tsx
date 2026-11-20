@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Monitor, Apple, Smartphone, Laptop, Check, Download, ExternalLink, Sparkles } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface InstallModalProps {
   isOpen: boolean;
@@ -47,30 +48,39 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
       }
       setInstalling(false);
     } else {
-      alert('Untuk browser ini, silakan ikuti petunjuk manual di tab bawah sesuai sistem operasi Anda.');
+      toast('Untuk browser ini, silakan ikuti petunjuk manual di tab bawah sesuai sistem operasi Anda.', 'info');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl">
+    <div
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="m-sheet relative flex flex-col w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Glow accent */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-32 w-80 bg-brand-500/20 blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="relative flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="relative flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 overflow-hidden rounded-xl border border-cyan-500/40 shadow-lg shadow-cyan-500/25 bg-dark-900 shrink-0">
               <img src="/icons/favicon.png" alt="Voice Lab" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Install Voice Lab</h2>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold sm:font-semibold text-white">Install Voice Lab</h2>
               <p className="text-xs text-dark-400">Gunakan sebagai aplikasi Desktop atau Mobile mandiri</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
+            aria-label="Tutup"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-400 hover:bg-dark-800 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -78,7 +88,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
 
         {/* Native 1-Click Install Banner (if prompt available) */}
         {deferredPrompt && !isInstalled && (
-          <div className="mx-6 mt-4 flex items-center justify-between rounded-xl bg-gradient-to-r from-brand-900/60 to-purple-900/60 border border-brand-500/40 p-4">
+          <div className="mx-4 sm:mx-6 mt-4 flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-brand-900/60 to-purple-900/60 border border-brand-500/40 p-4">
             <div>
               <h4 className="text-sm font-semibold text-white">1-Click Install Ready!</h4>
               <p className="text-xs text-brand-200 mt-0.5">Browser Anda mendukung instalasi langsung tanpa perantara.</p>
@@ -86,7 +96,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
             <button
               onClick={handleNativeInstall}
               disabled={installing}
-              className="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 hover:bg-brand-400 transition-all shrink-0"
+              className="flex h-11 sm:h-auto items-center justify-center gap-2 rounded-2xl sm:rounded-lg bg-brand-500 px-4 py-2 text-sm sm:text-xs font-semibold text-white shadow-lg shadow-brand-500/30 hover:bg-brand-400 transition-all shrink-0"
             >
               <Download className="h-4 w-4" />
               {installing ? 'Menginstall...' : 'Install Sekarang'}
@@ -95,17 +105,17 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
         )}
 
         {isInstalled && (
-          <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-emerald-950/60 border border-emerald-500/40 p-3 text-xs text-emerald-300">
+          <div className="mx-4 sm:mx-6 mt-4 flex shrink-0 items-center gap-2 rounded-xl bg-emerald-950/60 border border-emerald-500/40 p-3 text-xs text-emerald-300">
             <Check className="h-4 w-4 shrink-0 text-emerald-400" />
             Aplikasi sudah berjalan dalam mode standalone atau terinstall!
           </div>
         )}
 
         {/* Platform OS Tabs */}
-        <div className="flex border-b border-white/10 px-6 pt-4 gap-2">
+        <div className="flex shrink-0 overflow-x-auto no-scrollbar border-b border-white/10 px-4 sm:px-6 pt-3 sm:pt-4 gap-1 sm:gap-2">
           <button
             onClick={() => setActiveTab('windows')}
-            className={`flex items-center gap-2 pb-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 whitespace-nowrap items-center gap-2 pb-3 pt-1 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'windows'
                 ? 'border-brand-500 text-white'
                 : 'border-transparent text-dark-400 hover:text-dark-200'
@@ -116,7 +126,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
           </button>
           <button
             onClick={() => setActiveTab('macos')}
-            className={`flex items-center gap-2 pb-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 whitespace-nowrap items-center gap-2 pb-3 pt-1 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'macos'
                 ? 'border-brand-500 text-white'
                 : 'border-transparent text-dark-400 hover:text-dark-200'
@@ -127,7 +137,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
           </button>
           <button
             onClick={() => setActiveTab('ios')}
-            className={`flex items-center gap-2 pb-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 whitespace-nowrap items-center gap-2 pb-3 pt-1 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'ios'
                 ? 'border-brand-500 text-white'
                 : 'border-transparent text-dark-400 hover:text-dark-200'
@@ -138,7 +148,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
           </button>
           <button
             onClick={() => setActiveTab('android')}
-            className={`flex items-center gap-2 pb-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 whitespace-nowrap items-center gap-2 pb-3 pt-1 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'android'
                 ? 'border-brand-500 text-white'
                 : 'border-transparent text-dark-400 hover:text-dark-200'
@@ -150,7 +160,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 sm:max-h-[60vh]">
           {activeTab === 'windows' && (
             <div className="space-y-4 text-xs text-dark-300">
               <div className="rounded-xl bg-dark-950 p-4 border border-white/5 space-y-3">
@@ -165,7 +175,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
                 </ol>
               </div>
 
-              <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex items-center justify-between">
+              <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="font-semibold text-white text-xs">Download Desktop Launcher (.bat)</h4>
                   <p className="text-[11px] text-dark-400 mt-0.5">Buka Voice Lab langsung di window khusus desktop tanpa tab browser</p>
@@ -173,7 +183,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
                 <a
                   href="/scripts/VoiceLab-Windows.bat"
                   download="VoiceLab-Windows.bat"
-                  className="flex items-center gap-1.5 rounded-lg bg-dark-800 border border-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-dark-750 transition-colors shrink-0"
+                  className="flex h-11 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-lg bg-dark-800 border border-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-dark-750 transition-colors shrink-0"
                 >
                   <Download className="h-3.5 w-3.5 text-blue-400" />
                   Download .bat
@@ -205,7 +215,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
                 </div>
               </div>
 
-              <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex items-center justify-between">
+              <div className="rounded-xl bg-dark-950 p-4 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="font-semibold text-white text-xs">Download Mac Launcher (.command)</h4>
                   <p className="text-[11px] text-dark-400 mt-0.5">Jalankan sekali klik untuk membuka window app khusus di Mac</p>
@@ -213,7 +223,7 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
                 <a
                   href="/scripts/VoiceLab-Mac.command"
                   download="VoiceLab-Mac.command"
-                  className="flex items-center gap-1.5 rounded-lg bg-dark-800 border border-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-dark-750 transition-colors shrink-0"
+                  className="flex h-11 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-lg bg-dark-800 border border-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-dark-750 transition-colors shrink-0"
                 >
                   <Download className="h-3.5 w-3.5 text-purple-400" />
                   Download .command
@@ -259,13 +269,13 @@ export default function InstallModal({ isOpen, onClose, deferredPrompt }: Instal
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between border-t border-white/10 px-6 py-3.5 bg-dark-950/60">
-          <div className="text-[11px] text-dark-400">
+        <div className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 sm:px-6 py-3 sm:py-3.5 bg-dark-950/60">
+          <div className="hidden sm:block text-[11px] text-dark-400">
             PWA Standalone Engine • Zero Configuration
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg bg-dark-800 px-4 py-1.5 text-xs font-medium text-dark-200 hover:bg-dark-700 hover:text-white transition-colors"
+            className="w-full sm:w-auto h-12 sm:h-auto rounded-2xl sm:rounded-lg bg-dark-800 px-4 py-1.5 text-sm sm:text-xs font-medium text-dark-200 hover:bg-dark-700 hover:text-white transition-colors"
           >
             Tutup
           </button>

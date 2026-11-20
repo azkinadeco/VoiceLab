@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import AudioWaveVisualizer from './AudioWaveVisualizer';
 import TooltipInfo from './TooltipInfo';
+import PageHeader from './PageHeader';
+import { toast } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 
 interface ProjectsReaderProps {
   voices: Voice[];
@@ -157,7 +160,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
         onGenerationCreated(data.generation);
       }
     } catch (e: any) {
-      alert('Gagal menyintesis bab: ' + e.message);
+      toast('Gagal menyintesis bab: ' + e.message, 'error');
     } finally {
       setSynthesizingChapterId(null);
     }
@@ -166,62 +169,102 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
   const currentChapter = activeProject?.chapters.find((c) => c.id === activeChapterId);
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
-      {/* Compact Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-white">Audiobook Projects & Chapters</h1>
+    <div className="space-y-4 sm:space-y-5 max-w-6xl mx-auto">
+      <PageHeader
+        title="Audiobook Projects & Chapters"
+        mobileTitle="Naskah Panjang"
+        subtitle="Susun buku audio atau artikel panjang per bab dengan narator berbeda."
+        titleAddon={
           <TooltipInfo
             title="Multi-Chapter Audiobook Studio"
             text="Susun buku atau artikel panjang menjadi beberapa bab. Tiap bab dapat memilih narator dan aksen berbeda serta disimpan otomatis ke PC."
             position="right"
           />
-        </div>
+        }
+        actions={
+          activeProject ? (
+          <>
+            {projects.length > 0 && (
+              <>
+                <select
+                  value={activeProject.id}
+                  onChange={(e) => {
+                    const found = projects.find((p) => p.id === e.target.value);
+                    if (found) {
+                      setActiveProject(found);
+                      if (found.chapters[0]) setActiveChapterId(found.chapters[0].id);
+                    }
+                  }}
+                  aria-label="Pilih proyek"
+                  className="flex-1 min-w-0 sm:flex-none sm:max-w-[16rem] h-10 sm:h-auto rounded-xl bg-dark-900 border border-white/10 px-3 sm:py-2 text-xs font-semibold text-white"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      📚 {p.title} ({p.chapters.length} Bab)
+                    </option>
+                  ))}
+                </select>
 
-        <div className="flex items-center gap-2">
-          {projects.length > 0 && activeProject && (
-            <>
-              <select
-                value={activeProject.id}
-                onChange={(e) => {
-                  const found = projects.find((p) => p.id === e.target.value);
-                  if (found) {
-                    setActiveProject(found);
-                    if (found.chapters[0]) setActiveChapterId(found.chapters[0].id);
-                  }
-                }}
-                className="rounded-xl bg-dark-900 border border-white/10 px-3 py-2 text-xs font-semibold text-white"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    📚 {p.title} ({p.chapters.length} Bab)
-                  </option>
-                ))}
-              </select>
+                <button
+                  onClick={async () => {
+                    haptic();
+                    try {
+                      await handleSaveProject(activeProject);
+                      toast('Proyek tersimpan', 'success');
+                    } catch {
+                      toast('Gagal menyimpan proyek', 'error');
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="shrink-0 h-10 sm:h-auto rounded-xl bg-dark-850 border border-white/10 px-3.5 sm:py-2 text-[13px] sm:text-xs font-semibold text-white hover:bg-dark-800"
+                >
+                  {isSaving ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </>
+            )}
 
-              <button
-                onClick={() => handleSaveProject(activeProject)}
-                disabled={isSaving}
-                className="rounded-xl bg-dark-850 border border-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-dark-800"
-              >
-                {isSaving ? 'Menyimpan...' : 'Simpan'}
-              </button>
-            </>
-          )}
+            <button
+              onClick={() => {
+                haptic();
+                handleCreateProject();
+              }}
+              className="shrink-0 flex items-center gap-1.5 h-10 sm:h-auto rounded-xl bg-purple-600 hover:bg-purple-500 px-3.5 sm:py-2 text-[13px] sm:text-xs font-bold text-white whitespace-nowrap shadow-lg shadow-purple-500/20 transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Buku Baru
+            </button>
+          </>
+          ) : undefined
+        }
+      />
 
+      {!activeProject && (
+        <div className="studio-card rounded-2xl p-6 sm:p-8 text-center space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/15 text-purple-300">
+            <Volume2 className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-white">Belum ada proyek naskah</h3>
+            <p className="text-[13px] sm:text-xs text-dark-400 leading-snug">
+              Buat buku baru untuk mulai menyusun bab dan menghasilkan audio narasi.
+            </p>
+          </div>
           <button
-            onClick={handleCreateProject}
-            className="flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all"
+            onClick={() => {
+              haptic();
+              handleCreateProject();
+            }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-12 sm:h-10 rounded-2xl sm:rounded-xl bg-purple-600 hover:bg-purple-500 px-5 text-sm sm:text-xs font-bold text-white"
           >
             <Plus className="h-4 w-4" />
-            Buku Baru
+            Buat Buku Pertama
           </button>
         </div>
-      </div>
+      )}
 
       {/* Main Editor Grid */}
       {activeProject && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
           {/* Left: Chapters List */}
           <div className="lg:col-span-4 studio-card rounded-2xl p-4 space-y-3 h-fit">
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
@@ -230,7 +273,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
               </span>
               <button
                 onClick={handleAddChapter}
-                className="flex items-center gap-1 rounded-lg bg-purple-500/20 text-purple-300 px-2.5 py-1 text-xs font-bold hover:bg-purple-500/30"
+                className="flex items-center gap-1 h-9 sm:h-auto rounded-lg bg-purple-500/20 text-purple-300 px-3 sm:px-2.5 sm:py-1 text-xs font-bold hover:bg-purple-500/30"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Bab
@@ -244,7 +287,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                   <div
                     key={chap.id}
                     onClick={() => setActiveChapterId(chap.id)}
-                    className={`flex items-center justify-between rounded-xl p-3 cursor-pointer border transition-all ${
+                    className={`flex items-center justify-between gap-2 rounded-xl p-3 min-h-[52px] cursor-pointer border transition-all ${
                       isSelected
                         ? 'bg-purple-950/50 border-purple-400 text-white'
                         : 'bg-dark-850/60 border-white/5 text-dark-200 hover:text-white'
@@ -253,9 +296,9 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-purple-400">#{idx + 1}</span>
-                        <h4 className="text-xs font-bold truncate">{chap.title}</h4>
+                        <h4 className="text-[13px] sm:text-xs font-bold truncate">{chap.title}</h4>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-dark-300">
+                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-dark-300">
                         <span>{chap.content.length} kar</span>
                         {chap.audioUrl && (
                           <span className="text-emerald-400 flex items-center gap-0.5 font-semibold">
@@ -271,9 +314,11 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                           e.stopPropagation();
                           handleRemoveChapter(chap.id);
                         }}
-                        className="text-dark-400 hover:text-rose-400 p-1"
+                        className="shrink-0 flex h-9 w-9 sm:h-auto sm:w-auto items-center justify-center rounded-lg text-dark-400 hover:text-rose-400 sm:p-1"
+                        aria-label="Hapus bab"
+                        title="Hapus bab"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                       </button>
                     )}
                   </div>
@@ -285,7 +330,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
           {/* Right: Active Chapter Manuscript */}
           <div className="lg:col-span-8">
             {currentChapter && (
-              <div className="studio-card rounded-2xl p-5 space-y-4">
+              <div className="studio-card rounded-2xl p-4 sm:p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <input
                     type="text"
@@ -293,7 +338,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                     onChange={(e) =>
                       handleUpdateChapter(currentChapter.id, { title: e.target.value })
                     }
-                    className="flex-1 rounded-xl bg-dark-850 border border-white/10 px-3.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-purple-500"
+                    className="flex-1 min-w-0 h-11 sm:h-auto rounded-xl bg-dark-850 border border-white/10 px-3.5 sm:py-2 text-sm font-bold text-white focus:outline-none focus:border-purple-500"
                   />
 
                   <select
@@ -301,7 +346,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                     onChange={(e) =>
                       handleUpdateChapter(currentChapter.id, { voiceId: e.target.value })
                     }
-                    className="rounded-xl bg-dark-850 border border-white/10 px-3 py-2 text-xs font-semibold text-white"
+                    className="w-full sm:w-auto min-w-0 h-11 sm:h-auto rounded-xl bg-dark-850 border border-white/10 px-3 sm:py-2 text-xs font-semibold text-white"
                   >
                     {voices.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -318,12 +363,12 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                     handleUpdateChapter(currentChapter.id, { content: e.target.value })
                   }
                   placeholder="Tulis atau tempel naskah bab buku audio di sini..."
-                  className="w-full rounded-xl bg-dark-950/70 border border-white/10 p-4 text-base text-white leading-relaxed focus:outline-none focus:border-purple-500 resize-none"
+                  className="w-full rounded-xl bg-dark-950/70 border border-white/10 p-3.5 sm:p-4 text-base text-white leading-relaxed focus:outline-none focus:border-purple-500 resize-y"
                 />
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-dark-300 font-mono">
-                    {currentChapter.content.length} kar
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs text-dark-300 font-mono text-center sm:text-left">
+                    {currentChapter.content.length} karakter
                   </span>
 
                   <button
@@ -332,7 +377,7 @@ export default function ProjectsReader({ voices, onGenerationCreated }: Projects
                       synthesizingChapterId === currentChapter.id ||
                       !currentChapter.content.trim()
                     }
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl sm:rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 h-12 sm:h-auto sm:py-2.5 text-sm sm:text-xs font-bold text-white shadow-lg shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40"
                   >
                     <Wand2 className="h-4 w-4" />
                     {synthesizingChapterId === currentChapter.id

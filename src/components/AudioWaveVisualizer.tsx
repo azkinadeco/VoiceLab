@@ -292,7 +292,7 @@ export default function AudioWaveVisualizer({
     >
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2">
         <button
           onClick={togglePlay}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg shadow-brand-500/25 transition-transform hover:scale-105 active:scale-95"
@@ -332,7 +332,7 @@ export default function AudioWaveVisualizer({
           aria-valuenow={Math.round(currentTime)}
           aria-valuemin={0}
           aria-valuemax={Math.round(totalDuration)}
-          className="group relative flex h-10 flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-dark-900/80 px-2.5 focus:outline-none focus:ring-1 focus:ring-brand-400"
+          className="group relative flex h-10 min-w-0 flex-1 basis-[calc(100%-52px)] sm:basis-auto cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-dark-900/80 px-2.5 focus:outline-none focus:ring-1 focus:ring-brand-400"
           title="Klik atau gunakan tombol panah kiri/kanan untuk menggeser waktu putar"
         >
           {vizMode === 'bars' ? (
@@ -364,16 +364,16 @@ export default function AudioWaveVisualizer({
           )}
         </div>
 
-        <div className="text-right text-xs font-mono text-dark-300 shrink-0 min-w-[68px]">
+        <div className="pl-[52px] sm:pl-0 sm:text-right text-xs font-mono text-dark-300 shrink-0 sm:min-w-[68px]">
           <span className="text-white font-semibold">{formatTime(currentTime)}</span>
           <span className="text-dark-400"> / {formatTime(totalDuration)}</span>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="ml-auto flex items-center gap-1 shrink-0">
           {/* Visualizer Mode Switcher */}
           <button
             onClick={handleCycleVizMode}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+            className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
             title={`Mode Visualizer: ${vizMode.toUpperCase()} (Klik untuk ganti Bar / Neon Sine / Orb)`}
           >
             <Activity className="h-3.5 w-3.5" />
@@ -382,7 +382,7 @@ export default function AudioWaveVisualizer({
           {/* Speed Rate */}
           <button
             onClick={cycleRate}
-            className="rounded-lg bg-dark-850 border border-white/10 px-2 py-1 text-[11px] font-mono font-semibold text-brand-300 hover:text-white"
+            className="h-9 sm:h-auto rounded-lg bg-dark-850 border border-white/10 px-2.5 sm:px-2 sm:py-1 text-xs sm:text-[11px] font-mono font-semibold text-brand-300 hover:text-white"
             title="Kecepatan Putar"
           >
             {playbackRate}x
@@ -392,7 +392,7 @@ export default function AudioWaveVisualizer({
           {onOpenTrimmer && (
             <button
               onClick={() => onOpenTrimmer(audioUrl, totalDuration)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+              className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
               title="Potong Audio (Trim & Clip Silence)"
             >
               <Scissors className="h-3.5 w-3.5" />
@@ -402,7 +402,7 @@ export default function AudioWaveVisualizer({
           {/* Mute */}
           <button
             onClick={toggleMute}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
+            className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? (
@@ -416,7 +416,7 @@ export default function AudioWaveVisualizer({
           <a
             href={audioUrl}
             download={fileName}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
+            className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-dark-300 hover:bg-dark-800 hover:text-white transition-colors"
             title="Download Audio"
           >
             <Download className="h-4 w-4" />

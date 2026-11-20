@@ -38,5 +38,46 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["productivity", "multimedia", "utilities"]
+  "categories": [
+    "productivity",
+    "multimedia",
+    "utilities"
+  ],
+  "id": "/",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Buat Voiceover",
+      "short_name": "Voiceover",
+      "url": "/?tab=tts",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Studio Dubbing & SRT",
+      "short_name": "Studio",
+      "url": "/?tab=studio",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Riwayat Audio",
+      "short_name": "Riwayat",
+      "url": "/?tab=history",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }

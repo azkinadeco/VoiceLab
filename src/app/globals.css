@@ -163,3 +163,136 @@ body.oled-black .android-frame {
   background-color: #000000 !important;
   border-color: #18181b !important;
 }
+
+/* ==========================================================================
+   BATCH 1 — iPhone Portrait Foundation (safe-area, dynamic viewport, touch)
+   ========================================================================== */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  /* Height of the mobile tab bar (without safe area) */
+  --tabbar-h: 58px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+.pt-safe { padding-top: var(--sat); }
+.pb-safe { padding-bottom: var(--sab); }
+.px-safe { padding-left: max(var(--sal), 0px); padding-right: max(var(--sar), 0px); }
+.h-dvh-screen { height: 100vh; height: 100dvh; }
+.min-h-dvh-screen { min-height: 100vh; min-height: 100dvh; }
+
+/* Space reserved at the bottom of the page on phones so content never hides
+   behind the tab bar + mini player + home indicator. */
+.mobile-content-pad {
+  padding-bottom: calc(var(--tabbar-h) + var(--sab) + 88px);
+}
+@media (min-width: 1024px) {
+  .mobile-content-pad { padding-bottom: 5rem; }
+}
+
+/* Horizontal scroller with soft fade on the edges (chips rows) */
+.fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
+}
+
+/* Prevent iOS Safari auto-zoom on focus: inputs must be >= 16px on phones */
+@media (max-width: 640px) {
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='number'],
+  input[type='password'],
+  input[type='url'],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Bigger range thumb for fingers */
+@media (pointer: coarse) {
+  input[type='range'] { height: 6px; }
+  input[type='range']::-webkit-slider-thumb { width: 24px; height: 24px; }
+}
+
+/* ---------- Mobile bottom sheet primitive for every modal ----------
+   Usage: overlay gets `m-sheet-overlay`, panel gets `m-sheet`.
+   On phones the dialog docks to the bottom edge as an iOS sheet. */
+@media (max-width: 640px) {
+  .m-sheet-overlay {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  .m-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - var(--sat) - 16px) !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: none !important;
+    padding-bottom: var(--sab);
+    animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .m-sheet::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 8px auto 0;
+    flex-shrink: 0;
+  }
+}
+
+/* Simulator frames: real phone → full-bleed using dynamic viewport */
+@media (max-width: 640px) {
+  .iphone-frame,
+  .android-frame {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+}
+
+/* Toasts */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-in { animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-fadeIn { animation: fadeIn 0.18s ease-out both; }
+
+/* Mini player sits just above the tab bar on phones */
+.mini-player-pos {
+  bottom: calc(var(--tabbar-h) + var(--sab) + 8px);
+}
+@media (min-width: 1024px) {
+  .mini-player-pos { bottom: 20px; }
+}
+
+/* Make `position: fixed` sheets rendered inside the simulator stay inside the phone */
+.iphone-frame,
+.android-frame {
+  transform: translateZ(0);
+}

@@ -91,30 +91,42 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
   })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative flex flex-col w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl">
+    <div
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="m-sheet relative flex flex-col w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl bg-dark-900 border border-white/10 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 border border-brand-500/30 text-brand-400">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/20 border border-brand-500/30 text-brand-400">
               <BookOpen className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Pronunciation Dictionary & Phoneme Rules</h2>
-              <p className="text-xs text-dark-400">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-white">
+                <span className="sm:hidden">Kamus Pelafalan</span>
+                <span className="hidden sm:inline">Pronunciation Dictionary & Phoneme Rules</span>
+              </h2>
+              <p className="text-xs text-dark-400 line-clamp-2 sm:line-clamp-none">
                 Atur cara pelafalan singkatan, nama brand, istilah teknis, atau fonetik khusus secara otomatis
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-400 hover:bg-dark-800 hover:text-white"
+            aria-label="Tutup"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-400 hover:bg-dark-800 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 sm:space-y-6">
           {/* Add New Rule Form */}
           <div className="rounded-xl bg-dark-950 p-4 border border-white/10 space-y-3">
             <h3 className="text-xs font-semibold text-white">Tambah Aturan Pelafalan Baru</h3>
@@ -124,32 +136,32 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
                 placeholder="Kata asli (cth: UMKM)"
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
-                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2 text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
+                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2.5 sm:py-2 text-base sm:text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Pelafalan (cth: U M K M)"
                 value={replacement}
                 onChange={(e) => setReplacement(e.target.value)}
-                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2 text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
+                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2.5 sm:py-2 text-base sm:text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Fonetik IPA (opsional)"
                 value={phonetic}
                 onChange={(e) => setPhonetic(e.target.value)}
-                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2 text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
+                className="rounded-lg bg-dark-850 border border-white/10 px-3 py-2.5 sm:py-2 text-base sm:text-xs text-white placeholder-dark-500 focus:border-brand-500 focus:outline-none"
               />
               <button
                 onClick={handleAddRule}
                 disabled={!word.trim() || !replacement.trim()}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-40 transition-colors"
+                className="flex h-11 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-lg bg-brand-500 px-3 py-2 text-sm sm:text-xs font-semibold text-white hover:bg-brand-400 disabled:opacity-40 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Tambah Rule
               </button>
             </div>
-            <div className="flex items-center gap-4 pt-1 text-xs text-dark-300">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-xs text-dark-300">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -173,7 +185,7 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
 
           {/* Live Phoneme Transformer Sandbox */}
           <div className="rounded-xl bg-dark-850/60 border border-brand-500/20 p-4 space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-1">
               <span className="text-xs font-semibold text-brand-300 flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5" />
                 Live Pelafalan Sandbox
@@ -199,17 +211,17 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
             {rules.map((rule) => (
               <div
                 key={rule.id}
-                className="flex items-center justify-between rounded-xl bg-dark-850 border border-white/5 px-4 py-3 text-xs"
+                className="flex items-center justify-between gap-2 rounded-xl bg-dark-850 border border-white/5 px-3 sm:px-4 py-3 text-xs"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <input
                     type="checkbox"
                     checked={rule.enabled}
                     onChange={() => handleToggleRule(rule)}
                     className="accent-brand-500 h-4 w-4 cursor-pointer"
                   />
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 break-all">
                       <span className="font-semibold text-white">{rule.word}</span>
                       <span className="text-dark-500">→</span>
                       <span className="font-semibold text-brand-300">{rule.replacement}</span>
@@ -226,7 +238,8 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
                 </div>
                 <button
                   onClick={() => handleDeleteRule(rule.id)}
-                  className="text-dark-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                  aria-label="Hapus aturan"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center text-dark-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -235,10 +248,10 @@ export default function PronunciationModal({ isOpen, onClose }: PronunciationMod
           </div>
         </div>
 
-        <div className="flex items-center justify-end border-t border-white/10 px-6 py-3.5 bg-dark-950/60">
+        <div className="flex shrink-0 items-center justify-end border-t border-white/10 px-4 sm:px-6 py-3 sm:py-3.5 bg-dark-950/60">
           <button
             onClick={onClose}
-            className="rounded-lg bg-brand-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-400"
+            className="w-full sm:w-auto h-12 sm:h-auto rounded-2xl sm:rounded-lg bg-brand-500 px-4 py-1.5 text-sm sm:text-xs font-semibold text-white hover:bg-brand-400"
           >
             Selesai
           </button>

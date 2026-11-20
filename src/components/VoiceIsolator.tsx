@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import AudioWaveVisualizer from './AudioWaveVisualizer';
 import TooltipInfo from './TooltipInfo';
+import PageHeader from './PageHeader';
+import { toast } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 import { processVoiceIsolationDsp, blobToBase64, extractAudioFromMediaBlob } from '@/lib/audio-dsp';
 import { Film } from 'lucide-react';
 
@@ -58,7 +61,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err: any) {
-      alert('Gagal mengakses mikrofon: ' + err.message);
+      toast('Gagal mengakses mikrofon: ' + err.message, 'error');
     }
   };
 
@@ -84,7 +87,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
         setSourceBlob(extracted.wavBlob);
         setSourceAudioUrl(URL.createObjectURL(extracted.wavBlob));
       } catch (err: any) {
-        alert('Gagal mengekstrak audio dari video: ' + err.message);
+        toast('Gagal mengekstrak audio dari video: ' + err.message, 'error');
         setSourceBlob(file);
         setSourceAudioUrl(URL.createObjectURL(file));
       } finally {
@@ -130,41 +133,48 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
       setCompareMode('isolated');
       onGenerationCreated(data.generation);
     } catch (err: any) {
-      alert('Gagal mengisolasi audio: ' + err.message);
+      toast('Gagal mengisolasi audio: ' + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-white">Voice Isolator & Noise Gate DSP</h1>
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto">
+      <PageHeader
+        title="Voice Isolator & Noise Gate DSP"
+        mobileTitle="Isolasi Vokal"
+        subtitle="Bersihkan noise, dengung, dan desis dari rekaman atau video."
+        titleAddon={
           <TooltipInfo
             title="4-Stage Vocal Isolation"
             text="Memotong frekuensi gemuruh di bawah 85Hz, desis di atas 7.5kHz, menonjolkan frekuensi vokal 2.8kHz (+4.5dB), dan menerapkan Dynamic Noise Gate."
             position="right"
           />
-        </div>
-
-        <button
-          onClick={() => setShowDspControls(!showDspControls)}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
-            showDspControls
-              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-              : 'bg-dark-900 border-white/10 text-dark-300 hover:text-white'
-          }`}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Kekuatan Filter ({noiseStrength}%)
-        </button>
-      </div>
+        }
+        actions={
+          <button
+            onClick={() => {
+              haptic();
+              setShowDspControls(!showDspControls);
+            }}
+            aria-pressed={showDspControls}
+            className={`flex items-center gap-1.5 h-10 sm:h-auto rounded-xl px-3.5 sm:px-3 sm:py-1.5 text-[13px] sm:text-xs font-semibold border whitespace-nowrap transition-colors ${
+              showDspControls
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                : 'bg-dark-900 border-white/10 text-dark-300 hover:text-white'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Kekuatan Filter ({noiseStrength}%)
+          </button>
+        }
+      />
 
       <div className="studio-card rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
         {showDspControls && (
           <div className="rounded-xl bg-dark-950/70 border border-white/10 p-4 space-y-2 animate-in fade-in duration-150">
-            <div className="flex justify-between text-xs text-dark-200">
+            <div className="flex justify-between gap-2 text-xs text-dark-200">
               <span>Intensitas Pembersih Noise & Rumble Gate</span>
               <span className="font-mono font-bold text-emerald-400">{noiseStrength}%</span>
             </div>
@@ -179,13 +189,13 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
           </div>
         )}
 
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-dark-950/50 p-7 text-center min-h-[150px]">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-dark-950/50 p-3 sm:p-7 text-center min-h-[120px] sm:min-h-[150px]">
           {!sourceAudioUrl ? (
-            <div className="flex items-center justify-center gap-3">
+            <div className="grid grid-cols-2 w-full sm:flex sm:w-auto items-center justify-center gap-2.5 sm:gap-3">
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold ${
+                className={`flex items-center justify-center gap-2 h-12 sm:h-auto rounded-xl px-3 sm:px-4 sm:py-2.5 text-[13px] sm:text-xs font-bold whitespace-nowrap ${
                   isRecording
                     ? 'bg-rose-500 text-white animate-pulse'
                     : 'bg-emerald-600 text-white hover:bg-emerald-500'
@@ -194,14 +204,15 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
                 {isRecording ? (
                   <Square className="h-3.5 w-3.5 fill-white" />
                 ) : (
-                  <Mic className="h-3.5 w-3.5" />
+                  <Mic className="h-3.5 w-3.5 shrink-0" />
                 )}
-                {isRecording ? 'Berhenti Rekam' : 'Rekam Mikrofon'}
+                {isRecording ? 'Berhenti' : 'Rekam Mic'}
               </button>
 
-              <label className="flex items-center gap-2 rounded-xl bg-dark-850 text-white hover:bg-dark-800 border border-white/10 px-4 py-2.5 text-xs font-semibold cursor-pointer">
-                <Upload className="h-3.5 w-3.5 text-emerald-400" />
-                Upload Audio / Video (MP4)
+              <label className="flex items-center justify-center gap-2 h-12 sm:h-auto rounded-xl bg-dark-850 text-white hover:bg-dark-800 border border-white/10 px-3 sm:px-4 sm:py-2.5 text-[13px] sm:text-xs font-semibold whitespace-nowrap cursor-pointer">
+                <Upload className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                <span className="sm:hidden">Upload File</span>
+                <span className="hidden sm:inline">Upload Audio / Video (MP4)</span>
                 <input
                   type="file"
                   accept="audio/*,video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
@@ -217,11 +228,11 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
             </div>
           ) : (
             <div className="w-full space-y-3">
-              <div className="flex items-center justify-between text-xs text-dark-200">
-                <div className="flex items-center gap-2 truncate max-w-md">
+              <div className="flex items-center justify-between gap-2 text-xs text-dark-200">
+                <div className="flex items-center gap-2 min-w-0 max-w-md">
                   <span className="font-semibold text-white truncate">{fileName}</span>
                   {isVideoSource && (
-                    <span className="flex items-center gap-1 rounded bg-teal-500/20 text-teal-300 text-[10px] px-2 py-0.5 shrink-0">
+                    <span className="flex items-center gap-1 rounded bg-teal-500/20 text-teal-300 text-[11px] px-2 py-0.5 shrink-0">
                       <Film className="h-3 w-3" /> Video Audio Track
                     </span>
                   )}
@@ -232,7 +243,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
                     setSourceBlob(null);
                     setIsVideoSource(false);
                   }}
-                  className="text-dark-400 hover:text-rose-400"
+                  className="shrink-0 h-9 sm:h-auto px-2 sm:px-0 text-dark-400 hover:text-rose-400"
                 >
                   Ganti File
                 </button>
@@ -245,7 +256,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
         <button
           onClick={handleIsolate}
           disabled={isProcessing || !sourceBlob}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-500 hover:to-teal-500 transition-all disabled:opacity-40"
+          className="w-full flex items-center justify-center gap-2 rounded-2xl sm:rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 h-12 sm:h-auto sm:py-3 text-sm sm:text-xs font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-500 hover:to-teal-500 transition-all disabled:opacity-40"
         >
           <Filter className="h-4 w-4" />
           {isProcessing ? 'Memproses Filter DSP Vokal...' : 'Isolasi & Jernihkan Vokal'}
@@ -254,7 +265,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
 
       {/* Before / After A/B Comparison Result Card */}
       {resultGen && (
-        <div className="studio-card rounded-2xl border-emerald-500/40 p-5 space-y-3">
+        <div className="studio-card rounded-2xl border-emerald-500/40 p-4 sm:p-5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
               <Sparkles className="h-4 w-4" />
@@ -262,10 +273,10 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
             </span>
 
             {sourceAudioUrl && (
-              <div className="flex rounded-lg bg-dark-950 p-0.5 border border-white/10 text-xs">
+              <div className="grid grid-cols-2 w-full sm:w-auto sm:flex rounded-lg bg-dark-950 p-0.5 border border-white/10 text-xs">
                 <button
                   onClick={() => setCompareMode('isolated')}
-                  className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                  className={`h-9 sm:h-auto rounded-md px-2.5 sm:py-1 font-semibold transition-colors ${
                     compareMode === 'isolated'
                       ? 'bg-emerald-600 text-white'
                       : 'text-dark-400 hover:text-white'
@@ -275,7 +286,7 @@ export default function VoiceIsolator({ onGenerationCreated }: VoiceIsolatorProp
                 </button>
                 <button
                   onClick={() => setCompareMode('original')}
-                  className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                  className={`h-9 sm:h-auto rounded-md px-2.5 sm:py-1 font-semibold transition-colors ${
                     compareMode === 'original'
                       ? 'bg-dark-800 text-white'
                       : 'text-dark-400 hover:text-white'

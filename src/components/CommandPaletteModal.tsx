@@ -281,16 +281,20 @@ export default function CommandPaletteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/60 backdrop-blur-md animate-fadeIn"
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/60 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl rounded-2xl bg-dark-900/95 border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl flex flex-col max-h-[75vh]"
+        className="m-sheet relative w-full max-w-xl rounded-2xl bg-dark-900/95 border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl flex flex-col h-[85dvh] sm:h-auto max-h-[75vh]"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cari fitur"
         onKeyDown={handleKeyDown}
       >
         {/* Search Input Box */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10">
+        <div className="flex shrink-0 items-center gap-3 px-4 pt-2 pb-3 sm:py-3.5 border-b border-white/10">
+          <div className="flex flex-1 min-w-0 items-center gap-3 h-11 sm:h-auto rounded-xl sm:rounded-none bg-white/[0.06] sm:bg-transparent px-3 sm:px-0">
           <Search className="h-4 w-4 text-dark-400 shrink-0" />
           <input
             ref={inputRef}
@@ -301,15 +305,25 @@ export default function CommandPaletteModal({
               setSelectedIndex(0);
             }}
             placeholder="Cari fitur, suara karakter, atau aksi (Ketik 'Ardi', 'Jawa', 'Install')..."
-            className="w-full bg-transparent text-sm text-white placeholder-dark-500 focus:outline-none"
+            enterKeyHint="go"
+            className="w-full min-w-0 bg-transparent text-base sm:text-sm text-white placeholder-dark-500 focus:outline-none"
           />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup"
+            className="sm:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-300 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <kbd className="hidden sm:inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-mono text-dark-300">
             ESC
           </kbd>
         </div>
 
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-1 no-scrollbar">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-dark-400">
               Tidak ada fitur atau suara yang cocok dengan "{query}".
@@ -326,7 +340,7 @@ export default function CommandPaletteModal({
                     onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors ${
+                  className={`w-full flex items-center justify-between p-3 sm:p-2.5 rounded-xl text-left transition-colors ${
                     isSelected ? 'bg-brand-600 text-white' : 'hover:bg-white/[0.04] text-dark-200'
                   }`}
                 >
@@ -340,11 +354,11 @@ export default function CommandPaletteModal({
                     </div>
                     <div className="min-w-0 truncate">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white truncate">
+                        <span className="text-sm sm:text-xs font-semibold text-white truncate">
                           {item.title}
                         </span>
                         <span
-                          className={`text-[9px] px-1.5 py-0.2 rounded font-medium ${
+                          className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-medium ${
                             isSelected ? 'bg-white/20 text-white' : 'bg-dark-800 text-dark-400'
                           }`}
                         >
@@ -373,7 +387,7 @@ export default function CommandPaletteModal({
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between text-[11px] text-dark-400 bg-dark-950/50">
+        <div className="hidden sm:flex px-4 py-2 border-t border-white/10 items-center justify-between text-[11px] text-dark-400 bg-dark-950/50">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <kbd className="rounded bg-white/10 px-1 py-0.5 text-[9px] font-mono">↑</kbd>

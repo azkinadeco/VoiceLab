@@ -19,6 +19,7 @@ import {
   blobToBase64,
 } from '@/lib/audio-dsp';
 import confetti from 'canvas-confetti';
+import { toast } from '@/lib/toast';
 
 interface AudioTrimmerModalProps {
   isOpen: boolean;
@@ -164,10 +165,11 @@ export default function AudioTrimmerModal({
       if (onTrimSaved) {
         onTrimSaved(saveData.url, sliced.duration);
       }
+      toast('Audio berhasil dipotong & disimpan');
 
       onClose();
     } catch (err: any) {
-      alert('Gagal menyimpan hasil potong audio: ' + err.message);
+      toast('Gagal menyimpan hasil potong audio: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -187,23 +189,28 @@ export default function AudioTrimmerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
+      className="m-sheet-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-3xl bg-dark-900 border border-white/15 p-6 shadow-2xl space-y-5"
+        className="m-sheet relative flex flex-col w-full max-w-lg max-h-[90vh] overflow-hidden rounded-3xl bg-dark-900 border border-white/15 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <audio ref={audioRef} src={audioUrl} preload="auto" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 mx-4 sm:mx-6 pt-3 sm:pt-6 pb-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400">
               <Scissors className="h-4 w-4" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">Audio Trimmer & Silence Clipper</h2>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-sm font-bold text-white">
+                <span className="sm:hidden">Potong Audio</span>
+                <span className="hidden sm:inline">Audio Trimmer & Silence Clipper</span>
+              </h2>
               <p className="text-[11px] text-dark-400">
                 Potong durasi atau bersihkan sunyi awal & akhir audio
               </p>
@@ -212,17 +219,20 @@ export default function AudioTrimmerModal({
 
           <button
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+            aria-label="Tutup"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 sm:py-5 space-y-5">
 
         {/* Notice alert */}
         {notice && (
           <div className="flex items-center gap-2 rounded-xl bg-brand-500/15 border border-brand-500/30 p-2.5 text-xs text-brand-300">
             <Sparkles className="h-3.5 w-3.5 text-brand-400 shrink-0" />
-            <span className="truncate">{notice}</span>
+            <span className="line-clamp-2 sm:truncate">{notice}</span>
           </div>
         )}
 
@@ -283,7 +293,7 @@ export default function AudioTrimmerModal({
             </div>
 
             {/* Start Slider */}
-            <div className="flex items-center gap-2 text-[11px] text-dark-400">
+            <div className="flex h-10 sm:h-auto items-center gap-2 text-[11px] text-dark-400">
               <span className="w-12 shrink-0">Start:</span>
               <input
                 type="range"
@@ -297,7 +307,7 @@ export default function AudioTrimmerModal({
             </div>
 
             {/* End Slider */}
-            <div className="flex items-center gap-2 text-[11px] text-dark-400">
+            <div className="flex h-10 sm:h-auto items-center gap-2 text-[11px] text-dark-400">
               <span className="w-12 shrink-0">End:</span>
               <input
                 type="range"
@@ -312,12 +322,14 @@ export default function AudioTrimmerModal({
           </div>
         </div>
 
+        </div>
+
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/10">
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 sm:gap-3 mx-4 sm:mx-6 pt-3 pb-4 sm:pb-6 border-t border-white/10">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2">
             <button
               onClick={togglePlaySegment}
-              className="flex items-center gap-1.5 rounded-xl bg-dark-850 hover:bg-dark-800 border border-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors"
+              className="flex h-11 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-xl bg-dark-850 hover:bg-dark-800 border border-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors"
             >
               {isPlaying ? (
                 <>
@@ -335,7 +347,7 @@ export default function AudioTrimmerModal({
             <button
               onClick={handleAutoClipSilence}
               disabled={isAutoClipping}
-              className="flex items-center gap-1.5 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 px-3.5 py-2 text-xs font-semibold text-brand-300 transition-colors disabled:opacity-50"
+              className="flex h-11 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-xl bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 px-3.5 py-2 text-xs font-semibold text-brand-300 transition-colors disabled:opacity-50"
               title="Analisis dan hapus bagian sunyi secara otomatis"
             >
               {isAutoClipping ? (
@@ -343,14 +355,15 @@ export default function AudioTrimmerModal({
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              <span>Hapus Sunyi Otomatis</span>
+              <span className="sm:hidden">Hapus Sunyi</span>
+              <span className="hidden sm:inline">Hapus Sunyi Otomatis</span>
             </button>
           </div>
 
           <button
             onClick={handleSaveTrim}
             disabled={isSaving || trimDuration <= 0}
-            className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-zinc-200 text-black px-4 py-2 text-xs font-bold transition-all disabled:opacity-40"
+            className="flex w-full sm:w-auto h-12 sm:h-auto items-center justify-center gap-1.5 rounded-2xl sm:rounded-xl bg-white hover:bg-zinc-200 text-black px-4 py-2 text-sm sm:text-xs font-bold transition-all disabled:opacity-40"
           >
             {isSaving ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />

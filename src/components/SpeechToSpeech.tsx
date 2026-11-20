@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import AudioWaveVisualizer from './AudioWaveVisualizer';
 import TooltipInfo from './TooltipInfo';
+import PageHeader from './PageHeader';
+import { toast } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 
 interface SpeechToSpeechProps {
   voices: Voice[];
@@ -137,7 +140,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err: any) {
-      alert('Gagal mengakses mikrofon: ' + err.message);
+      toast('Gagal mengakses mikrofon: ' + err.message, 'error');
     }
   };
 
@@ -196,41 +199,47 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
       setResultGen(data.generation);
       onGenerationCreated(data.generation);
     } catch (err: any) {
-      alert('Gagal mengubah suara: ' + err.message);
+      toast('Gagal mengubah suara: ' + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
-      {/* Compact Header with Progressive Disclosure Tooltip */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-white">Voice Changer (Speech-to-Speech)</h1>
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto">
+      <PageHeader
+        title="Voice Changer (Speech-to-Speech)"
+        mobileTitle="Ubah Suara"
+        subtitle="Rekam atau upload suara, lalu ubah ke karakter target."
+        titleAddon={
           <TooltipInfo
             title="Cara Kerja Voice Changer"
             text="Rekam suara Anda atau upload file audio. Sistem menangkap ucapan Anda dan menyuarakannya kembali menggunakan karakter & aksen target."
             position="right"
           />
-        </div>
+        }
+        actions={
+          <button
+            onClick={() => {
+              haptic();
+              setShowAdvanced(!showAdvanced);
+            }}
+            aria-pressed={showAdvanced}
+            className={`flex items-center gap-1.5 h-10 sm:h-auto rounded-xl px-3.5 sm:px-3 sm:py-1.5 text-[13px] sm:text-xs font-semibold border whitespace-nowrap transition-colors ${
+              showAdvanced
+                ? 'bg-brand-500/20 border-brand-500/40 text-brand-300'
+                : 'bg-dark-900 border-white/10 text-dark-300 hover:text-white'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Pitch & Tempo
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
-            showAdvanced
-              ? 'bg-brand-500/20 border-brand-500/40 text-brand-300'
-              : 'bg-dark-900 border-white/10 text-dark-300 hover:text-white'
-          }`}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Pitch & Tempo
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
         {/* Step 1: Source Input */}
-        <div className="studio-card rounded-2xl p-5 space-y-4">
+        <div className="studio-card rounded-2xl p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-white uppercase tracking-wider">
               1. Suara Asli
@@ -248,14 +257,14 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
             )}
           </div>
 
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-dark-950/50 p-5 text-center min-h-[130px]">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-dark-950/50 p-3 sm:p-5 text-center min-h-[110px] sm:min-h-[130px]">
             {!sourceAudioUrl ? (
               <div className="w-full flex flex-col items-center justify-center">
-                <div className="flex items-center justify-center gap-2.5">
+                <div className="grid grid-cols-2 w-full sm:flex sm:w-auto items-center justify-center gap-2.5">
                   <button
                     type="button"
                     onClick={isRecording ? stopRecording : startRecording}
-                    className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                    className={`flex items-center justify-center gap-2 h-12 sm:h-auto rounded-xl px-3 sm:px-4 sm:py-2.5 text-[13px] sm:text-xs font-bold whitespace-nowrap transition-all ${
                       isRecording
                         ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30'
                         : 'bg-brand-600 text-white hover:bg-brand-500'
@@ -269,7 +278,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
                     {isRecording ? 'Berhenti Rekam' : 'Bicara di Mic'}
                   </button>
 
-                  <label className="flex items-center gap-2 rounded-xl bg-dark-850 text-dark-200 hover:text-white hover:bg-dark-800 border border-white/10 px-4 py-2.5 text-xs font-semibold cursor-pointer">
+                  <label className="flex items-center justify-center gap-2 h-12 sm:h-auto rounded-xl bg-dark-850 text-dark-200 hover:text-white hover:bg-dark-800 border border-white/10 px-3 sm:px-4 sm:py-2.5 text-[13px] sm:text-xs font-semibold whitespace-nowrap cursor-pointer">
                     <Upload className="h-3.5 w-3.5 text-brand-400" />
                     Upload Audio
                     <input
@@ -291,7 +300,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
                       </span>
                       <div className="flex items-center gap-2 font-mono">
                         {livePitchHz > 0 && (
-                          <span className="rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 px-1.5 py-0.5 text-[10px]">
+                          <span className="rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 px-1.5 py-0.5 text-[11px]">
                             {livePitchHz} Hz ({liveVocalRange})
                           </span>
                         )}
@@ -329,23 +338,23 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
               />
             </div>
             <textarea
-              rows={2}
+              rows={3}
               value={recognizedText}
               onChange={(e) => setRecognizedText(e.target.value)}
               placeholder="Bicara di mikrofon atau ketik kalimat yang ingin dikonversi ke suara target..."
-              className="w-full rounded-xl bg-dark-950/70 border border-white/10 p-3 text-xs text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 resize-none"
+              className="w-full rounded-xl bg-dark-950/70 border border-white/10 p-3 text-sm sm:text-xs text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 resize-none"
             />
           </div>
         </div>
 
         {/* Step 2: Target Character */}
-        <div className="studio-card rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div className="studio-card rounded-2xl p-4 sm:p-5 space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">
-                2. Karakter & Aksen Target
+              <span className="text-xs font-bold text-white uppercase tracking-wider min-w-0">
+                2. Karakter Target
               </span>
-              <span className="text-xs text-brand-300 font-semibold">
+              <span className="text-xs text-brand-300 font-semibold truncate">
                 {selectedVoice.accent}
               </span>
             </div>
@@ -353,7 +362,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
             <select
               value={targetVoiceId}
               onChange={(e) => setTargetVoiceId(e.target.value)}
-              className="w-full rounded-xl bg-dark-850 border border-white/10 px-3.5 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brand-500"
+              className="w-full rounded-xl bg-dark-850 border border-white/10 px-3.5 h-11 sm:h-auto sm:py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brand-500"
             >
               {voices.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -419,7 +428,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
           <button
             onClick={handleConvert}
             disabled={isProcessing || (!sourceAudioUrl && !recognizedText.trim())}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-brand-500/25 hover:from-brand-400 hover:to-indigo-500 transition-all disabled:opacity-40"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl sm:rounded-xl bg-gradient-to-r from-brand-500 to-indigo-600 px-5 h-12 sm:h-auto sm:py-3 text-sm sm:text-xs font-bold text-white shadow-lg shadow-brand-500/25 hover:from-brand-400 hover:to-indigo-500 transition-all disabled:opacity-40"
           >
             <RefreshCw className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
             {isProcessing ? 'Mengonversi Karakter Suara...' : 'Konversi ke Suara Target'}
@@ -428,7 +437,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
       </div>
 
       {resultGen && (
-        <div className="studio-card rounded-2xl border-brand-500/40 p-5 space-y-3">
+        <div className="studio-card rounded-2xl border-brand-500/40 p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
               <Sparkles className="h-4 w-4" />
