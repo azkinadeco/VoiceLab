@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { saveAudioFile, addGeneration, SUB_DIRS } from '@/lib/storage';
+import { saveAudioFile, addGeneration, SUB_DIRS, AUDIO_DIR } from '@/lib/storage';
 import { Generation } from '@/lib/types';
 
-const DATA_AUDIO_DIR = path.join(process.cwd(), 'data', 'audio');
+export const runtime = 'nodejs';
+
+const DATA_AUDIO_DIR = AUDIO_DIR;
 
 const AVATARS: Record<string, string> = {
   'speech-to-speech':

@@ -597,7 +597,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
             audioUrl={resultGen.audioUrl}
             duration={resultGen.duration}
             autoPlay
-            fileName={`${resultGen.voiceName.replace(/[^\w-]+/g, '-')}-${resultGen.id}.${resultGen.audioUrl.endsWith('.wav') ? 'wav' : 'mp3'}`}
+            fileName={`${resultGen.voiceName.replace(/[^\w-]+/g, '-')}-${resultGen.id}.${resultGen.audioUrl.endsWith('.wav') || resultGen.audioUrl.startsWith('data:audio/wav') ? 'wav' : 'mp3'}`}
           />
         </div>
       )}

@@ -9,6 +9,9 @@ import {
 } from '@/lib/storage';
 import { Generation, GenerationSettings } from '@/lib/types';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 function generateSrtFromText(text: string, totalDurationSec: number): string {
   const sentences = text
     .split(/(?<=[.!?])\s+/)

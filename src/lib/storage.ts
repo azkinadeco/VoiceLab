@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import {
   Generation,
   Voice,
@@ -11,9 +12,18 @@ import {
 } from './types';
 import { PRESET_VOICES } from './voices-data';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+export const IS_SERVERLESS = Boolean(
+  process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NETLIFY ||
+    process.cwd().startsWith('/var/task')
+);
+
+export const DATA_DIR = IS_SERVERLESS
+  ? path.join(os.tmpdir(), 'voicelab-data')
+  : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
-const AUDIO_DIR = path.join(DATA_DIR, 'audio');
+export const AUDIO_DIR = path.join(DATA_DIR, 'audio');
 
 export const SUB_DIRS = {
   generations: path.join(AUDIO_DIR, 'generations'),
@@ -232,7 +242,9 @@ export function getGenerations(): Generation[] {
 
 export function addGeneration(gen: Generation): Generation {
   const db = readDb();
-  db.generations = [gen, ...(db.generations || [])];
+  const next = [gen, ...(db.generations || [])];
+  // Keep serverless /tmp db compact when inline data URIs are stored
+  db.generations = IS_SERVERLESS ? next.slice(0, 30) : next;
   writeDb(db);
   return gen;
 }
@@ -471,6 +483,25 @@ export async function saveAudioFile(
   const targetDir = SUB_DIRS[category];
   const filePath = path.join(targetDir, filename);
   fs.writeFileSync(filePath, buffer);
+
+  // On Vercel/serverless, /tmp is ephemeral and not shared across instances.
+  // Return an inline data URI so playback, waveform, download, and trimmer always work without 404.
+  if (IS_SERVERLESS && buffer.length <= 4 * 1024 * 1024) {
+    const ext = path.extname(filename).toLowerCase();
+    const isWav = buffer.slice(0, 4).toString('ascii') === 'RIFF' || ext === '.wav';
+    const mime = isWav
+      ? 'audio/wav'
+      : ext === '.webm'
+        ? 'audio/webm'
+        : ext === '.ogg'
+          ? 'audio/ogg'
+          : 'audio/mpeg';
+    return {
+      filePath,
+      relativeUrl: `data:${mime};base64,${buffer.toString('base64')}`,
+    };
+  }
+
   const relativeUrl = `/api/storage?file=${category}/${filename}`;
   return { filePath, relativeUrl };
 }

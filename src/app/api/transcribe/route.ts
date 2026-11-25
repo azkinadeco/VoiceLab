@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
+import { DATA_DIR } from '@/lib/storage';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 60;
 
-const MODELS_DIR = path.join(process.cwd(), 'data', 'models');
+const MODELS_DIR = path.join(DATA_DIR, 'models');
 const MODEL_ID = process.env.WHISPER_MODEL || 'onnx-community/whisper-base';
 
 // Keep a single pipeline instance across requests (and across dev hot-reloads)

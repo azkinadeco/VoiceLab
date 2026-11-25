@@ -404,7 +404,10 @@ export async function synthesizeSpeech(
     console.warn('Google Neural TTS fallback failed:', googleErr?.message || googleErr);
   }
 
-  // Tier 3: macOS Native Offline Speech (/usr/bin/say)
-  console.log('Switching to Tier 3 macOS Native Offline Speech Engine');
-  return synthesizeMacNativeOffline(cleanText, voiceEdgeId, settings);
+  // Tier 3: macOS Native Offline Speech (/usr/bin/say) — only available on macOS
+  if (process.platform === 'darwin') {
+    console.log('Switching to Tier 3 macOS Native Offline Speech Engine');
+    return synthesizeMacNativeOffline(cleanText, voiceEdgeId, settings);
+  }
+  throw new Error('Semua engine TTS online gagal merespons. Silakan coba lagi beberapa saat.');
 }
