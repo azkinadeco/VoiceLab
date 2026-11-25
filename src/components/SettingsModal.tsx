@@ -12,7 +12,8 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: SettingsModalProps) {
-  const [provider, setProvider] = useState<'edge-neural' | 'elevenlabs-api' | 'openai-api'>('edge-neural');
+  const [provider, setProvider] = useState<'edge-neural' | 'freetts-api' | 'elevenlabs-api' | 'openai-api'>('edge-neural');
+  const [freeTtsApiKey, setFreeTtsApiKey] = useState('');
   const [elevenApiKey, setElevenApiKey] = useState('');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
   const [audioFormat, setAudioFormat] = useState<'mp3' | 'wav'>('mp3');
@@ -54,6 +55,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
         .then((data) => {
           if (data.settings) {
             setProvider(data.settings.ttsProvider || 'edge-neural');
+            setFreeTtsApiKey(data.settings.freeTtsApiKey || '');
             setElevenApiKey(data.settings.elevenLabsApiKey || '');
             setOpenAiApiKey(data.settings.openAiApiKey || '');
             setAudioFormat(data.settings.audioFormat || 'mp3');
@@ -76,6 +78,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ttsProvider: provider,
+          freeTtsApiKey: freeTtsApiKey.trim(),
           elevenLabsApiKey: elevenApiKey.trim(),
           openAiApiKey: openAiApiKey.trim(),
           audioFormat,
@@ -221,6 +224,52 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                   <p className="text-[11px] text-dark-400 mt-0.5">
                     Kualitas suara sangat natural setara ElevenLabs tanpa perlu API key, tanpa kuota batas.
                   </p>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-3 rounded-xl p-3.5 border cursor-pointer transition-colors ${
+                  provider === 'freetts-api'
+                    ? 'border-brand-500 bg-brand-950/20'
+                    : 'border-white/5 bg-dark-950/60 hover:bg-dark-850'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="provider"
+                  value="freetts-api"
+                  checked={provider === 'freetts-api'}
+                  onChange={() => setProvider('freetts-api')}
+                  className="mt-0.5 accent-brand-500"
+                />
+                <div className="w-full">
+                  <h4 className="text-xs font-semibold text-white flex items-center gap-2">
+                    FreeTTS Neural API (Terbaik untuk Vercel • Gratis)
+                    <span className="rounded bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 text-[10px]">
+                      2.250+ Suara
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-dark-400 mt-0.5">
+                    Suara neural jernih (Ardi, Gadis, Jawa, Sunda, dll.) via REST API freetts.org. Ambil API key gratis di{' '}
+                    <a
+                      href="https://freetts.org/developers"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand-300 underline"
+                    >
+                      freetts.org/developers
+                    </a>
+                    .
+                  </p>
+                  <div className="mt-2.5">
+                    <input
+                      type="password"
+                      placeholder="FreeTTS x-api-key (atau set FREETTS_API_KEY di Vercel)"
+                      value={freeTtsApiKey}
+                      onChange={(e) => setFreeTtsApiKey(e.target.value)}
+                      className="w-full rounded-lg bg-dark-900 border border-white/10 px-3 py-2.5 sm:py-1.5 text-base sm:text-xs text-white placeholder-dark-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
                 </div>
               </label>
 

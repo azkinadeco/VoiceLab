@@ -126,7 +126,8 @@ export interface DubbingProject {
 }
 
 export interface AppSettings {
-  ttsProvider: 'edge-neural' | 'elevenlabs-api' | 'openai-api' | 'browser-speech';
+  ttsProvider: 'edge-neural' | 'freetts-api' | 'elevenlabs-api' | 'openai-api' | 'browser-speech';
+  freeTtsApiKey?: string;
   elevenLabsApiKey?: string;
   openAiApiKey?: string;
   audioFormat: 'mp3' | 'wav';

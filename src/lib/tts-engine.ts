@@ -304,6 +304,74 @@ export function mergeAudioBuffers(buffers: Buffer[]): { buffer: Buffer; format: 
   return { buffer: Buffer.concat(buffers), format: 'mp3' };
 }
 
+// Tier 0C / Vercel Primary: FreeTTS Neural REST API (https://freetts.org/developers)
+// Supports all 2,250+ neural voices (id-ID-ArdiNeural, id-ID-GadisNeural, jv-ID-*, su-ID-*, etc.) over pure HTTPS
+async function synthesizeFreeTts(
+  text: string,
+  voiceEdgeId: string,
+  settings: GenerationSettings,
+  apiKey: string
+): Promise<SynthesisResult> {
+  const stabilitySpeedOffset = ((50 - settings.stability) / 500) * 0.1;
+  const effectiveSpeed = Math.max(0.5, Math.min(1.9, settings.speed + stabilitySpeedOffset));
+  const ratePct = Math.round((effectiveSpeed - 1.0) * 100);
+  const rateStr = ratePct >= 0 ? `+${ratePct}%` : `${ratePct}%`;
+
+  const stylePitchBoost = Math.round((settings.styleExaggeration / 100) * 8);
+  const pitchHz = Math.round(settings.pitch + stylePitchBoost);
+  const pitchStr = pitchHz >= 0 ? `+${pitchHz}Hz` : `${pitchHz}Hz`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch('https://freetts.org/api/v1/tts', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        text,
+        voice: voiceEdgeId || 'id-ID-GadisNeural',
+        rate: rateStr,
+        pitch: pitchStr,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`FreeTTS HTTP ${res.status}: ${errText.slice(0, 140)}`);
+    }
+
+    const data = await res.json();
+    const fileId = data?.file_id;
+    if (!fileId) {
+      throw new Error('FreeTTS tidak mengembalikan file_id');
+    }
+
+    const audioRes = await fetch(`https://freetts.org/api/audio/${encodeURIComponent(fileId)}`, {
+      signal: controller.signal,
+    });
+    if (!audioRes.ok) {
+      throw new Error(`FreeTTS audio download HTTP ${audioRes.status}`);
+    }
+    const buffer = Buffer.from(await audioRes.arrayBuffer());
+    if (buffer.length < 256) {
+      throw new Error('FreeTTS mengembalikan audio kosong');
+    }
+
+    return {
+      buffer,
+      duration: estimateDurationSec(text, settings.speed),
+      format: 'mp3',
+      engine: 'FreeTTS Neural API (2,250+ Voices)',
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function synthesizeSpeech(
   text: string,
   voiceEdgeId: string,
@@ -374,6 +442,16 @@ export async function synthesizeSpeech(
       }
     } catch (e) {
       console.warn('OpenAI TTS API failed, falling back to Neural Edge TTS:', e);
+    }
+  }
+
+  // Tier 0C: FreeTTS Neural REST API (auto-active if FREETTS_API_KEY env var or Settings key is provided)
+  const freeTtsKey = (appSettings.freeTtsApiKey || process.env.FREETTS_API_KEY || '').trim();
+  if (freeTtsKey) {
+    try {
+      return await synthesizeFreeTts(cleanText, voiceEdgeId, settings, freeTtsKey);
+    } catch (ftErr: any) {
+      console.warn('FreeTTS API failed, falling back:', ftErr?.message || ftErr);
     }
   }
 
