@@ -24,7 +24,6 @@ export default function PageHeader({
   mobileTitle,
   subtitle,
   icon,
-  titleAddon,
   actions,
 }: PageHeaderProps) {
   // On mobile (< lg), the screen title already lives in the sticky Header — don't duplicate it!
@@ -41,10 +40,9 @@ export default function PageHeader({
             <h1 className="min-w-0 text-lg font-bold tracking-tight text-white leading-tight">
               {title}
             </h1>
-            {titleAddon && <div className="shrink-0">{titleAddon}</div>}
           </div>
           {subtitle && (
-            <p className="mt-1 text-xs text-dark-400 leading-snug">{subtitle}</p>
+            <p className="mt-0.5 text-xs text-dark-400 leading-snug">{subtitle}</p>
           )}
         </div>
       </div>
@@ -64,10 +62,9 @@ export default function PageHeader({
             <span className="sm:hidden">{mobileTitle || title}</span>
             <span className="hidden sm:inline">{title}</span>
           </h1>
-          {titleAddon && <div className="shrink-0">{titleAddon}</div>}
         </div>
         {subtitle && (
-          <p className="mt-1 text-xs text-dark-400 leading-snug">{subtitle}</p>
+          <p className="mt-0.5 text-xs text-dark-400 leading-snug">{subtitle}</p>
         )}
       </div>
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar sm:shrink-0">

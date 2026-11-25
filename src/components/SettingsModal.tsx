@@ -2,8 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppSettings } from '@/lib/types';
-import { X, HardDrive, Key, Sliders, Check, Folder, Info, Moon } from 'lucide-react';
+import { X, HardDrive, Key, Sliders, Check, Folder, Info, Moon, RotateCcw } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import {
+  computeTokenQuota,
+  resetTokenQuota,
+  formatTokenNumber,
+  syncLiveElevenQuota,
+  TokenQuotaSnapshot,
+} from '@/lib/token-quota';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,13 +24,23 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
   const [freeTtsApiKey, setFreeTtsApiKey] = useState('');
   const [elevenApiKey, setElevenApiKey] = useState('');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
-  const [envConfigured, setEnvConfigured] = useState<{ gemini?: boolean; freetts?: boolean }>({});
+  const [envConfigured, setEnvConfigured] = useState<{ gemini?: boolean; freetts?: boolean; elevenlabs?: boolean }>({});
   const [audioFormat, setAudioFormat] = useState<'mp3' | 'wav'>('mp3');
   const [isOled, setIsOled] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [tokenQuota, setTokenQuota] = useState<TokenQuotaSnapshot>(() => computeTokenQuota([]));
+
+  const refreshQuota = () => {
+    syncLiveElevenQuota().finally(() => {
+      fetch('/api/history')
+        .then((r) => r.json())
+        .then((d) => setTokenQuota(computeTokenQuota(Array.isArray(d.generations) ? d.generations : [])))
+        .catch(() => setTokenQuota(computeTokenQuota([])));
+    });
+  };
 
   const handleClearCache = async () => {
     if (!confirm('Apakah Anda yakin ingin menghapus seluruh riwayat audio lama untuk mengosongkan hard disk PC Anda?')) {
@@ -52,6 +69,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
   useEffect(() => {
     if (isOpen) {
       setIsOled(localStorage.getItem('voicelab_oled') === 'true');
+      refreshQuota();
       fetch('/api/settings')
         .then((res) => res.json())
         .then((data) => {
@@ -112,6 +130,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
+        refreshQuota();
         toast('Pengaturan berhasil disimpan');
         if (onSettingsSaved) onSettingsSaved();
       }
@@ -148,6 +167,59 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 sm:max-h-[70vh]">
+          {/* API Token Limit & Quota Section (Gemini TTS & FreeTTS) */}
+          <div className="rounded-xl bg-dark-950 p-4 border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <Key className="h-4 w-4 text-emerald-400" />
+                Kuota & Limit Token TTS (Gemini & FreeTTS)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  resetTokenQuota('all');
+                  refreshQuota();
+                  toast('Hitungan kuota token di-reset');
+                }}
+                className="flex items-center gap-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] px-2.5 py-1 text-[11px] font-medium text-dark-200 hover:text-white transition-colors"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset Token
+              </button>
+            </div>
+
+            {/* Compact 3-Column Quota Summary (Gemini, ElevenLabs, FreeTTS) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              {[
+                { label: '✨ Gemini', q: tokenQuota.gemini, bar: 'bg-emerald-400' },
+                { label: '🎙️ ElevenLabs', q: tokenQuota.elevenlabs, bar: 'bg-violet-400' },
+                { label: '⚡ FreeTTS', q: tokenQuota.freetts, bar: 'bg-sky-400' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 space-y-1"
+                >
+                  <div className="flex items-center justify-between text-[11.5px]">
+                    <span className="font-semibold text-white">{item.label}</span>
+                    <span className="font-mono font-bold text-white">{item.q.percent}%</span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${item.q.percent >= 90 ? 'bg-rose-500' : item.bar}`}
+                      style={{ width: `${Math.max(3, item.q.percent)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10.5px] font-mono text-dark-300">
+                    <span>
+                      {formatTokenNumber(item.q.used)} / {formatTokenNumber(item.q.limit)}
+                    </span>
+                    <span>Sisa {formatTokenNumber(item.q.remaining)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Storage on PC Section */}
           <div className="rounded-xl bg-dark-950 p-4 border border-white/5 space-y-3">
             <div className="flex items-center justify-between">
@@ -372,21 +444,30 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                   className="mt-0.5 accent-brand-500"
                 />
                 <div className="w-full">
-                  <h4 className="text-xs font-semibold text-white">Official ElevenLabs API</h4>
+                  <h4 className="text-xs font-semibold text-white flex flex-wrap items-center gap-2">
+                    Official ElevenLabs API (Multilingual v2 • 12 Karakter Gratis)
+                    {envConfigured.elevenlabs ? (
+                      <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 text-[10px]">
+                        ✓ Aktif dari Server Env
+                      </span>
+                    ) : (
+                      <span className="rounded bg-violet-500/20 text-violet-300 px-1.5 py-0.5 text-[10px]">
+                        Anime & Karakter Ekspresif
+                      </span>
+                    )}
+                  </h4>
                   <p className="text-[11px] text-dark-400 mt-0.5">
-                    Hubungkan akun resmi elevenlabs.io Anda untuk menggunakan kuota langganan API Anda.
+                    Suara karakter gratis ElevenLabs (Gigi, Mimi, Jessica, Charlotte, Lily, Sarah, Brian, dll.) + sinkronisasi sisa kuota otomatis.
                   </p>
-                  {provider === 'elevenlabs-api' && (
-                    <div className="mt-2.5">
-                      <input
-                        type="password"
-                        placeholder="xi-api-key (cth: sk_...)"
-                        value={elevenApiKey}
-                        onChange={(e) => setElevenApiKey(e.target.value)}
-                        className="w-full rounded-lg bg-dark-900 border border-white/10 px-3 py-2.5 sm:py-1.5 text-base sm:text-xs text-white placeholder-dark-500 focus:outline-none focus:border-brand-500"
-                      />
-                    </div>
-                  )}
+                  <div className="mt-2.5">
+                    <input
+                      type="password"
+                      placeholder="ElevenLabs xi-api-key (cth: sk_... atau set ELEVENLABS_API_KEY di Vercel)"
+                      value={elevenApiKey}
+                      onChange={(e) => setElevenApiKey(e.target.value)}
+                      className="w-full rounded-lg bg-dark-900 border border-white/10 px-3 py-2.5 sm:py-1.5 text-base sm:text-xs text-white placeholder-dark-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
                 </div>
               </label>
             </div>

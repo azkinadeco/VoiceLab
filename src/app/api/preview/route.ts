@@ -66,8 +66,10 @@ export async function POST(request: NextRequest) {
       appSettings,
       {
         geminiVoice: voice.geminiVoice,
+        elevenVoiceId: voice.elevenVoiceId,
         voicevoxSpeakerId: voice.voicevoxSpeakerId,
         actingDirection: voice.actingDirection,
+        accent: voice.accent,
       }
     );
 

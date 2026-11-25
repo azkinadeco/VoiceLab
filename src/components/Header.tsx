@@ -173,105 +173,54 @@ export default function Header({
     <>
       {phoneHeader}
       <header className="hidden lg:flex sticky top-0 z-30 items-center justify-between border-b border-white/[0.06] bg-dark-950/85 backdrop-blur-xl px-6 py-2.5">
-        <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1 border border-white/[0.06]">
-          {subPills.map((pill) => {
-            const isActive = activeTab === pill.id;
-            return (
-              <button
-                key={pill.id}
-                onClick={() => onTabChange(pill.id)}
-                className={`rounded-full px-3.5 py-1 text-xs font-medium transition-all shrink-0 ${
-                  isActive ? 'bg-white text-black font-semibold shadow-sm' : 'text-dark-300 hover:text-white'
-                }`}
-              >
-                {pill.label}
-              </button>
-            );
-          })}
-        </div>
+        {subPills.length > 1 ? (
+          <div className="flex items-center gap-1 rounded-xl bg-white/[0.04] p-1 border border-white/[0.06]">
+            {subPills.map((pill) => {
+              const isActive = activeTab === pill.id;
+              return (
+                <button
+                  key={pill.id}
+                  onClick={() => onTabChange(pill.id)}
+                  className={`rounded-lg px-3.5 py-1 text-xs font-medium transition-all shrink-0 ${
+                    isActive ? 'bg-white text-black font-semibold shadow-sm' : 'text-dark-300 hover:text-white'
+                  }`}
+                >
+                  {pill.short}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-sm font-bold text-white tracking-tight">{hub.title}</div>
+        )}
 
-        <div className="flex items-center gap-1.5 shrink-0 pl-2">
+        <div className="flex items-center gap-2 shrink-0 pl-2">
           {onOpenSpotlight && (
             <button
               onClick={onOpenSpotlight}
-              className="flex items-center gap-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] px-3 py-1.5 text-xs text-dark-300 hover:text-white transition-all"
-              title="Buka Spotlight Command Palette (Cmd + K)"
+              className="flex items-center gap-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] px-3 py-1.5 text-xs text-dark-300 hover:text-white transition-all"
+              title="Cari fitur atau suara (Cmd + K)"
             >
-              <Search className="h-3 w-3" />
-              <span className="text-[11px]">Cari...</span>
+              <Search className="h-3.5 w-3.5" />
+              <span className="text-[11.5px]">Cari</span>
               <kbd className="inline-flex rounded bg-white/10 px-1 text-[9px] font-mono">⌘K</kbd>
             </button>
           )}
 
-          {onToggleOledTheme && (
+          {onSetDevicePreviewMode && (
             <button
-              onClick={onToggleOledTheme}
-              className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all ${
-                isOled
-                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/30'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] border-white/[0.08] text-dark-300 hover:text-white'
-              }`}
-              title={isOled ? 'Ganti ke Tema Titanium Dark' : 'Ganti ke Tema OLED Pure Black'}
+              onClick={() => onSetDevicePreviewMode(devicePreviewMode === 'desktop' ? 'iphone' : 'desktop')}
+              className="flex items-center gap-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] px-3 py-1.5 text-xs font-medium text-dark-200 hover:text-white transition-all"
+              title="Pratinjau tampilan HP"
             >
-              <Moon className="h-3.5 w-3.5" />
+              <Smartphone className="h-3.5 w-3.5" />
+              <span>Mode HP</span>
             </button>
           )}
 
-          {onSetDevicePreviewMode ? (
-            <div className="flex items-center rounded-full bg-white/[0.05] border border-white/[0.08] p-0.5">
-              {(
-                [
-                  { id: 'desktop', label: 'PC', icon: Monitor },
-                  { id: 'iphone', label: 'iPhone', icon: Smartphone },
-                  { id: 'android', label: 'Android', icon: Smartphone },
-                ] as const
-              ).map((m) => {
-                const Icon = m.icon;
-                const active = devicePreviewMode === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => onSetDevicePreviewMode(m.id)}
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
-                      active
-                        ? m.id === 'android'
-                          ? 'bg-purple-400 text-black shadow-sm'
-                          : 'bg-white text-black shadow-sm'
-                        : 'text-dark-300 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="h-3 w-3" />
-                    <span>{m.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : onToggleIphonePreview ? (
-            <button
-              onClick={onToggleIphonePreview}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all ${
-                isIphonePreview
-                  ? 'bg-white text-black border-white shadow-sm'
-                  : 'bg-white/[0.05] text-dark-200 border-white/[0.08] hover:bg-white/[0.1] hover:text-white'
-              }`}
-            >
-              {isIphonePreview ? <Monitor className="h-3.5 w-3.5" /> : <Smartphone className="h-3.5 w-3.5" />}
-              <span>{isIphonePreview ? 'Layar Penuh' : 'Versi iPhone'}</span>
-            </button>
-          ) : null}
-
-          <button
-            onClick={onOpenInstall}
-            className="flex items-center gap-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] px-3 py-1.5 text-xs font-semibold text-white transition-all"
-            title="Install ke Windows, macOS, iPhone, atau Android"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Install</span>
-          </button>
-
           <button
             onClick={onOpenSettings}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-dark-300 hover:text-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-dark-300 hover:text-white transition-colors"
             title="Pengaturan"
           >
             <Settings className="h-3.5 w-3.5" />

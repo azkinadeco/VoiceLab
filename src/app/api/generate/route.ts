@@ -100,8 +100,10 @@ export async function POST(request: NextRequest) {
       appSettings,
       {
         geminiVoice: targetVoice.geminiVoice,
+        elevenVoiceId: targetVoice.elevenVoiceId,
         voicevoxSpeakerId: targetVoice.voicevoxSpeakerId,
         actingDirection: targetVoice.actingDirection,
+        accent: targetVoice.accent,
       }
     );
 

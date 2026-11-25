@@ -58,25 +58,25 @@ export default function Sidebar({
   isIphonePreview = false,
   onToggleIphonePreview,
 }: SidebarProps) {
-  // 5 Focused Creator & Seller Navigation Hubs
+  // 5 Focused Navigation Hubs (Short, clean, scannable labels)
   const primaryHubs = [
     {
       id: 'tts' as ActiveTab,
       matchIds: ['tts', 'batch'],
-      label: 'Voiceover Konten',
+      label: 'Voiceover',
       icon: Mic,
+    },
+    {
+      id: 'speech2speech' as ActiveTab,
+      matchIds: ['speech2speech', 'isolator'],
+      label: 'Ubah Suara',
+      icon: AudioWaveform,
     },
     {
       id: 'voicelab' as ActiveTab,
       matchIds: ['voicelab'],
       label: 'Kloning Suara',
       icon: Dna,
-    },
-    {
-      id: 'speech2speech' as ActiveTab,
-      matchIds: ['speech2speech', 'isolator'],
-      label: 'Ubah & Isolasi Video',
-      icon: AudioWaveform,
     },
     {
       id: 'studio' as ActiveTab,
@@ -87,7 +87,7 @@ export default function Sidebar({
     {
       id: 'history' as ActiveTab,
       matchIds: ['history', 'analytics'],
-      label: 'Koleksi & CapCut',
+      label: 'Riwayat Audio',
       icon: History,
       count: storageStats?.totalGenerations,
     },
@@ -221,17 +221,6 @@ export default function Sidebar({
               {!isCollapsed && <span>{isIphonePreview ? 'Mode Desktop' : 'Versi iPhone'}</span>}
             </button>
           ) : null}
-
-          <button
-            onClick={onOpenInstall}
-            title="Install App"
-            className={`w-full flex items-center ${
-              isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
-            } rounded-xl text-xs font-medium text-dark-300 hover:text-white hover:bg-white/[0.05] transition-colors`}
-          >
-            <Download className="h-4 w-4 shrink-0" />
-            {!isCollapsed && <span>Install App</span>}
-          </button>
 
           <button
             onClick={onOpenSettings}

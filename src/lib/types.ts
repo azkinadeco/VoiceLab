@@ -12,6 +12,7 @@ export interface Voice {
   avatarEmoji?: string;
   voiceIdEdge: string;
   geminiVoice?: string;
+  elevenVoiceId?: string;
   voicevoxSpeakerId?: number;
   actingDirection?: string;
   labels: {

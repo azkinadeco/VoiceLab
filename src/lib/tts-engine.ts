@@ -392,63 +392,458 @@ const EMOTION_DIRECTIONS: Record<string, { cue: string; speedMul: number; pitchA
 
 export interface VoiceSynthesisHints {
   geminiVoice?: string;
+  elevenVoiceId?: string;
   voicevoxSpeakerId?: number;
   actingDirection?: string;
+  accent?: string;
 }
 
-// Local VOICEVOX Engine (http://127.0.0.1:50021) — 50+ authentic Japanese anime voices, 0 watermark, 0 quota limit
+function mapEdgeVoiceToElevenVoice(voiceEdgeId: string): string {
+  const lower = (voiceEdgeId || '').toLowerCase();
+  if (lower.includes('aoi')) return 'jBpfuIE2acCO8z3wKNLl'; // Gigi (Anime)
+  if (lower.includes('mayu')) return 'cgSgspJ2msm6clMCkdW9'; // Jessica (Expressive)
+  if (lower.includes('nanami')) return 'EXAVITQu4vr4xnSDxMaL'; // Sarah (Soft)
+  if (lower.includes('shiori')) return 'XrExE9yKIg1WjnnlVkGX'; // Matilda (Mature)
+  if (lower.includes('gadis') || lower.includes('jenny') || lower.includes('aria')) return '21m00Tcm4TlvDq8ikWAM'; // Rachel
+  if (lower.includes('siti') || lower.includes('tuti')) return 'FGY2WhTYpPnrIDTdsKH5'; // Laura
+  if (lower.includes('dimas') || lower.includes('ryan')) return 'JBFqnCBsd6RMkjVDRZzb'; // George
+  if (lower.includes('jajang') || lower.includes('guy')) return 'TX3LPaxmHKxFdv7VOQHJ'; // Liam
+  return 'nPczCjzI2devNBz1zQrb'; // Brian
+}
+
+// Clean Romaji -> natural Japanese (Kanji + Katakana + Hiragana) converter.
+// STRICT RULE: ONLY place Japanese commas (、) where the user actually wrote a comma (,) or stutter (-)!
+// NEVER insert fake commas in the middle of clauses (like したり / あんたのために / 寝てる間に / すごいすごい).
+function romajiToAnimeJapanese(input: string): string {
+  if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(input)) {
+    return input
+      .replace(/([\u3040-\u30FF\u4E00-\u9FAF])\s+([\u3040-\u30FF\u4E00-\u9FAF])/g, '$1$2')
+      .replace(/~/g, 'ー')
+      .trim();
+  }
+
+  let s = input
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[`'’]/g, "'")
+    // CRITICAL: Normalize macron vowels FIRST because JS \b word-boundary fails on non-ASCII chars like ē/ō/ū!
+    .replace(/ā/g, 'aa')
+    .replace(/ī/g, 'ii')
+    .replace(/ū/g, 'uu')
+    .replace(/ē/g, 'ee')
+    .replace(/ō/g, 'ou')
+    // 1. Anime stutters ("be-betsu" -> "べっ、別", "a-ano" -> "あっ、あの")
+    .replace(/\bbe-betsu\b/g, 'べっ、別')
+    .replace(/\b([a-z]{1,2})-([a-z]+)/g, '$1っ、$2')
+    // 2. High-frequency anime & game vocabulary -> exact Kanji/Katakana (ZERO fake commas!)
+    .replace(/\bkon'?nichiwa\b/g, 'こんにちは')
+    .replace(/\bkonbanwa\b/g, 'こんばんは')
+    .replace(/\bohayou\s+gozaimasu\b/g, 'おはようございます')
+    .replace(/\bohayou\b/g, 'おはよう')
+    .replace(/\barigatou\s+gozaimasu\b/g, 'ありがとうございます')
+    .replace(/\barigatou\b/g, 'ありがとう')
+    .replace(/\byoroshiku\b/g, 'よろしく')
+    .replace(/\bokaerinasai\b/g, 'おかえりなさい')
+    .replace(/\bokaeri\b/g, 'おかえり')
+    .replace(/\bsaikin\b/g, '最近')
+    .replace(/\bie\s+de\b/g, '家で')
+    .replace(/\bgeemu\b/g, 'ゲーム')
+    .replace(/\bshitari\b/g, 'したり')
+    .replace(/\banime\b/g, 'アニメ')
+    .replace(/\bmitari\b/g, '見たり')
+    .replace(/\bmiru\s+no\b/g, '見るの')
+    .replace(/\bmiru\b/g, '見る')
+    .replace(/\bsuru\s+dake\s+nanda\b/g, 'するだけなんだ')
+    .replace(/\bhee+\b/g, 'へぇー')
+    .replace(/\bkimi\s+mo\b/g, '君も')
+    .replace(/\bkimi\b/g, '君')
+    .replace(/\bbetsu\s+ni\b/g, '別に')
+    .replace(/\banta\s+no\s+tame\s+ni\b/g, 'あんたのために')
+    .replace(/\banta\b/g, 'あんた')
+    .replace(/\btakarabako\b/g, '宝箱')
+    .replace(/\batsumete\s+oita\b/g, '集めておいた')
+    .replace(/\bn\s*janai\s*n\s*dakara\s*ne\b/g, 'んじゃないんだからね')
+    .replace(/\bjanai\b/g, 'じゃない')
+    .replace(/\bdakara\s+ne\b/g, 'だからね')
+    .replace(/\bwaa+i\b/g, 'わーい')
+    .replace(/\bneteru\s+aida\s+ni\b/g, '寝てる間に')
+    .replace(/\bneteru\b/g, '寝てる')
+    .replace(/\baida\s+ni\b/g, '間に')
+    .replace(/\breberu\b/g, 'レベル')
+    .replace(/\bagatteru\s*~?/g, '上がってるー')
+    .replace(/\bsugoi\s+sugoi\b/g, 'すごいすごい')
+    .replace(/\bsugoi\b/g, 'すごい')
+    .replace(/\bboisu\s+rabu\b/g, 'ボイスラボ')
+    .replace(/\byoukoso\b/g, 'ようこそ')
+    .replace(/\bonsei\b/g, '音声')
+    .replace(/\bakusento\b/g, 'アクセント')
+    .replace(/\bsentaku\s+shi\b/g, '選択し')
+    .replace(/\bseisei\b/g, '生成')
+    .replace(/\bkurikku\s+shite\b/g, 'クリックして')
+    .replace(/\bnyuuraru\b/g, 'ニューラル')
+    .replace(/\bningen\s+no\s+youna\b/g, '人間のような')
+    .replace(/\bshizen'?na\b/g, '自然な')
+    .replace(/\bkiite\s+mite\s+kudasai\b/g, '聞いてみてください')
+    .replace(/~/g, 'ー')
+    .replace(/\s+wa(?=\s|[.,!?]|$)/g, ' は')
+    .replace(/\s+e(?=\s|[.,!?]|$)/g, ' へ')
+    .replace(/\s+o(?=\s|[.,!?]|$)/g, ' を')
+    .replace(/\s+wo(?=\s|[.,!?]|$)/g, ' を');
+
+  const table: Record<string, string> = {
+    kya: 'きゃ', kyu: 'きゅ', kyo: 'きょ',
+    sha: 'しゃ', shu: 'しゅ', sho: 'しょ',
+    cha: 'ちゃ', chu: 'ちゅ', cho: 'ちょ',
+    nya: 'にゃ', nyu: 'にゅ', nyo: 'にょ',
+    hya: 'ひゃ', hyu: 'ひゅ', hyo: 'ひょ',
+    mya: 'みゃ', myu: 'みゅ', myo: 'みょ',
+    rya: 'りゃ', ryu: 'りゅ', ryo: 'りょ',
+    gya: 'ぎゃ', gyu: 'ぎゅ', gyo: 'ぎょ',
+    bya: 'びゃ', byu: 'びゅ', byo: 'びょ',
+    pya: 'ぴゃ', pyu: 'ぴゅ', pyo: 'ぴょ',
+    jya: 'じゃ', jyu: 'じゅ', jyo: 'じょ',
+    shi: 'し', chi: 'ち', tsu: 'つ',
+    ka: 'か', ki: 'き', ku: 'く', ke: 'け', ko: 'こ',
+    sa: 'さ', si: 'し', su: 'す', se: 'せ', so: 'そ',
+    ta: 'た', ti: 'ち', tu: 'つ', te: 'て', to: 'と',
+    na: 'な', ni: 'に', nu: 'ぬ', ne: 'ね', no: 'の',
+    ha: 'は', hi: 'ひ', fu: 'ふ', hu: 'ふ', he: 'へ', ho: 'ほ',
+    ma: 'ま', mi: 'み', mu: 'む', me: 'め', mo: 'も',
+    ya: 'や', yu: 'ゆ', yo: 'よ',
+    ra: 'ら', ri: 'り', ru: 'る', re: 'れ', ro: 'ろ',
+    wa: 'わ', wi: 'うぃ', we: 'うぇ', wo: 'を',
+    ga: 'が', gi: 'ぎ', gu: 'ぐ', ge: 'げ', go: 'ご',
+    za: 'ざ', ji: 'じ', zi: 'じ', zu: 'ず', ze: 'ぜ', zo: 'ぞ',
+    da: 'だ', di: 'ぢ', du: 'づ', de: 'で', do: 'ど',
+    ba: 'ば', bi: 'び', bu: 'ぶ', be: 'べ', bo: 'ぼ',
+    pa: 'ぱ', pi: 'ぴ', pu: 'ぷ', pe: 'ぺ', po: 'ぽ',
+    ja: 'じゃ', ju: 'じゅ', jo: 'じょ',
+    va: 'ゔぁ', vi: 'ゔぃ', vu: 'ゔ', ve: 'ゔぇ', vo: 'ゔぉ',
+    fa: 'ふぁ', fi: 'ふぃ', fe: 'ふぇ', fo: 'ふぉ',
+    la: 'ら', li: 'り', lu: 'る', le: 'れ', lo: 'ろ',
+    a: 'あ', i: 'い', u: 'う', e: 'え', o: 'お',
+    '.': '。', ',': '、', '!': '！', '?': '？',
+  };
+
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(ch)) {
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === "'" || ch === ' ' || ch === '\t') {
+      i++;
+      continue;
+    }
+    if (
+      i + 1 < s.length &&
+      ch === s[i + 1] &&
+      /[bcdfghjklmpqrstvwxyz]/.test(ch)
+    ) {
+      out += 'っ';
+      i++;
+      continue;
+    }
+    const tri = s.slice(i, i + 3);
+    if (table[tri]) {
+      out += table[tri];
+      i += 3;
+      continue;
+    }
+    const bi = s.slice(i, i + 2);
+    if (table[bi]) {
+      out += table[bi];
+      i += 2;
+      continue;
+    }
+    if (ch === 'n') {
+      const next = s[i + 1] || '';
+      if (!next || !/[aiueoy]/.test(next)) {
+        out += 'ん';
+        i++;
+        continue;
+      }
+    }
+    if (table[ch]) {
+      out += table[ch];
+      i++;
+      continue;
+    }
+    if (/[0-9ー〜！？。、っ\n]/.test(ch)) {
+      out += ch;
+    }
+    i++;
+  }
+  return out.replace(/、+/g, '、').replace(/。+/g, '。').trim() || input;
+}
+
+// Convert any remaining pure-Hiragana clause into natural Kanji+Kana while preserving commas & guarding against IME traps
+async function upgradeSentenceToKanjiSafe(sentence: string): Promise<string> {
+  const parts = sentence.split(/([、。！？]+)/);
+  const out: string[] = [];
+  for (const part of parts) {
+    if (!part) continue;
+    if (/^[、。！？]+$/.test(part) || /[\u4E00-\u9FAF\u30A0-\u30FF]/.test(part) || part.length <= 4) {
+      out.push(part);
+      continue;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const url = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(part)}`;
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) {
+        out.push(part);
+        continue;
+      }
+      const data: unknown = await res.json();
+      if (!Array.isArray(data)) {
+        out.push(part);
+        continue;
+      }
+      let converted = data
+        .map((seg: any) => (Array.isArray(seg) && Array.isArray(seg[1]) && seg[1][0] ? String(seg[1][0]) : ''))
+        .join('')
+        .trim();
+      if (!converted) {
+        out.push(part);
+        continue;
+      }
+      converted = converted
+        .replace(/和愛/g, 'わーい')
+        .replace(/上ってる/g, '上がってる')
+        .replace(/入ラル/g, 'ニューラル')
+        .replace(/選択肢/g, '選択し')
+        .replace(/アニメミル/g, 'アニメ見る');
+      out.push(converted);
+    } catch {
+      out.push(part);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return out.join('');
+}
+
+type DialogueMood = 'casual' | 'curious' | 'tsundere' | 'happy' | 'sad';
+
+interface DirectedVoicevoxSegment {
+  jp: string;
+  mood: DialogueMood;
+  pauseMs: number;
+}
+
+function detectSentenceMood(sentence: string): DialogueMood {
+  if (/べっ|別に|あんた|だからね|ふん|バカ|ばか/.test(sentence)) return 'tsundere';
+  if (/わぁい|わーい|すごい|やった|上がってる|うれし|最高/.test(sentence)) return 'happy';
+  if (/[？?]$/.test(sentence)) return 'curious';
+  if (/お願い|一人にしないで|悲し|泣/.test(sentence)) return 'sad';
+  if (/[！!]$/.test(sentence)) return 'happy';
+  return 'casual';
+}
+
+// Per-speaker acoustic profile so mature/seductive voices sound warm, low, soft & alluring (never shrill/high-pitched!)
+// and tsundere/normal voices speak at a natural, unhurried conversational pace like Gemini TTS.
+function getSpeakerAcousticProfile(speakerId: number): {
+  baseSpeed: number;
+  basePitch: number;
+  baseIntonation: number;
+  commaPauseSec: number;
+} {
+  // Reina (Dewasa) -> Speaker #29 (No.7) or #17 / #20: lower pitch to warm adult female alto (-0.045), unhurried poised pace (0.87)
+  if ([29, 17, 20, 9].includes(speakerId)) {
+    return { baseSpeed: 0.87, basePitch: -0.042, baseIntonation: 1.32, commaPauseSec: 0.30 };
+  }
+  // Lilith (Menggoda) -> Speaker #4 (Metan Sexy) or #5: lower pitch (-0.035) + slower breathy tempo (0.85) so it sounds soft & seductive, NOT shrill
+  if ([4, 5].includes(speakerId)) {
+    return { baseSpeed: 0.85, basePitch: -0.035, baseIntonation: 1.36, commaPauseSec: 0.32 };
+  }
+  // Rei (Sedih / Dingin) -> Speaker #36 / #14: soft, gentle, slow (0.86)
+  if ([36, 14, 22].includes(speakerId)) {
+    return { baseSpeed: 0.86, basePitch: -0.015, baseIntonation: 1.22, commaPauseSec: 0.32 };
+  }
+  // Yui (Lembut) -> Speaker #0 / #10: warm, gentle healer (0.88)
+  if ([0, 10].includes(speakerId)) {
+    return { baseSpeed: 0.88, basePitch: -0.01, baseIntonation: 1.30, commaPauseSec: 0.28 };
+  }
+  // Akane (Tsundere) -> Speaker #2 / #6: clear, expressive, NEVER rushed (0.90 base speed, distinct comma pauses!)
+  if ([2, 6].includes(speakerId)) {
+    return { baseSpeed: 0.90, basePitch: 0.0, baseIntonation: 1.38, commaPauseSec: 0.28 };
+  }
+  // Default (Momo #1/#3, Hina #8, etc.): natural conversational anime pace (0.91)
+  return { baseSpeed: 0.91, basePitch: 0.0, baseIntonation: 1.35, commaPauseSec: 0.27 };
+}
+
+// Keep each full sentence as ONE single request (smooth coarticulation) with real Gemini-like inter-sentence pauses (650-780ms)
+async function buildExpressiveSegments(text: string): Promise<DirectedVoicevoxSegment[]> {
+  const jpFull = romajiToAnimeJapanese(text);
+  const rawSentences = jpFull
+    .split(/(?<=[。！？.!?\n]+)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const segments: DirectedVoicevoxSegment[] = [];
+
+  for (let sIdx = 0; sIdx < rawSentences.length; sIdx++) {
+    const rawSent = rawSentences[sIdx];
+    const isLastSent = sIdx === rawSentences.length - 1;
+    const sent = await upgradeSentenceToKanjiSafe(rawSent);
+    const mood = detectSentenceMood(sent);
+
+    let pauseMs = 0;
+    if (!isLastSent) {
+      if (/[…]{1,}|\.{3,}/.test(sent)) pauseMs = 780;
+      else if (sent.length <= 6 && /[！!]$/.test(sent)) pauseMs = 340; // clear pause after "わーい！" before next sentence
+      else if (/[？?]$/.test(sent)) pauseMs = 720; // natural pause after question like Gemini
+      else if (/[！!]$/.test(sent)) pauseMs = 680; // natural pause after exclamation
+      else pauseMs = 700; // clear period breathing pause between sentences
+    }
+
+    segments.push({
+      jp: sent,
+      mood,
+      pauseMs,
+    });
+  }
+
+  return segments.length > 0 ? segments : [{ jp: jpFull, mood: 'casual', pauseMs: 0 }];
+}
+
+function createWavSilence(durationMs: number, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const numSamples = Math.max(0, Math.round((sampleRate * durationMs) / 1000));
+  const dataSize = numSamples * numChannels * (bitsPerSample / 8);
+  const pcm = Buffer.alloc(dataSize, 0);
+  return wrapPcmAsWav(pcm, sampleRate, numChannels, bitsPerSample);
+}
+
+// Local VOICEVOX Engine (http://127.0.0.1:50021) — Gemini-matched prosody, clear comma & period pauses, warm adult formant pitch
 async function synthesizeVoicevox(
   text: string,
   speakerId: number,
   settings: GenerationSettings,
-  baseUrl: string
+  baseUrl: string,
+  _geminiKey?: string
 ): Promise<SynthesisResult> {
   const cleanUrl = baseUrl.replace(/\/+$/, '');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const queryRes = await fetch(
-      `${cleanUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(String(speakerId))}`,
-      { method: 'POST', signal: controller.signal }
-    );
-    if (!queryRes.ok) {
-      throw new Error(`VOICEVOX audio_query HTTP ${queryRes.status}`);
-    }
-    const audioQuery = await queryRes.json();
+  const segments = await buildExpressiveSegments(text);
+  const profile = getSpeakerAcousticProfile(speakerId);
+  const wavBuffers: Buffer[] = [];
+  let detectedSampleRate = 24000;
 
-    // Map our sliders to VOICEVOX AudioQuery prosody parameters
-    audioQuery.speedScale = Math.max(0.5, Math.min(2.0, settings.speed));
-    audioQuery.pitchScale = Math.max(-0.15, Math.min(0.15, settings.pitch / 200));
-    audioQuery.intonationScale = Math.max(0.5, Math.min(2.0, 1.0 + (settings.styleExaggeration / 100) * 0.6));
-    audioQuery.volumeScale = settings.speakerBoost ? 1.15 : 1.0;
+  for (const seg of segments) {
+    const sentence = seg.jp;
+    const isQuestion = /[？?]$/.test(sentence);
+    const isExclaim = /[！!]$/.test(sentence);
+    const isHappy = seg.mood === 'happy';
+    const isTsundere = seg.mood === 'tsundere';
+    const isSad = seg.mood === 'sad';
 
-    const synthRes = await fetch(
-      `${cleanUrl}/synthesis?speaker=${encodeURIComponent(String(speakerId))}`,
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', Accept: 'audio/wav' },
-        body: JSON.stringify(audioQuery),
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90000);
+    try {
+      const queryRes = await fetch(
+        `${cleanUrl}/audio_query?text=${encodeURIComponent(sentence)}&speaker=${encodeURIComponent(String(speakerId))}`,
+        { method: 'POST', signal: controller.signal }
+      );
+      if (!queryRes.ok) {
+        throw new Error(`VOICEVOX audio_query HTTP ${queryRes.status}`);
       }
-    );
-    if (!synthRes.ok) {
-      throw new Error(`VOICEVOX synthesis HTTP ${synthRes.status}`);
-    }
-    const wavBuffer = Buffer.from(await synthRes.arrayBuffer());
-    if (wavBuffer.length < 256) {
-      throw new Error('VOICEVOX mengembalikan audio kosong');
-    }
+      const audioQuery = await queryRes.json();
 
-    const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
-    return {
-      buffer: wavBuffer,
-      duration,
-      format: 'wav',
-      engine: `VOICEVOX Lokal (Speaker #${speakerId})`,
-    };
-  } finally {
-    clearTimeout(timer);
+      // Unhurried, expressive conversational pacing tuned to match Gemini TTS
+      audioQuery.speedScale = isSad
+        ? Number((profile.baseSpeed * 0.94).toFixed(3))
+        : isQuestion
+          ? Number((profile.baseSpeed * 0.96).toFixed(3))
+          : isTsundere
+            ? Number((profile.baseSpeed * 0.98).toFixed(3))
+            : isHappy
+              ? Number((profile.baseSpeed * 1.02).toFixed(3))
+              : profile.baseSpeed;
+      audioQuery.pitchScale = profile.basePitch;
+      audioQuery.intonationScale = isHappy
+        ? Math.min(1.55, profile.baseIntonation + 0.12)
+        : isTsundere
+          ? Math.min(1.50, profile.baseIntonation + 0.08)
+          : isQuestion
+            ? Math.min(1.45, profile.baseIntonation + 0.05)
+            : profile.baseIntonation;
+      audioQuery.volumeScale = isHappy || isExclaim ? 1.04 : 1.0;
+      audioQuery.prePhonemeLength = 0.10;
+      audioQuery.postPhonemeLength = 0.10;
+      audioQuery.pauseLengthScale = 1.0;
+
+      if (Array.isArray(audioQuery.accent_phrases) && audioQuery.accent_phrases.length > 0) {
+        const phrases = audioQuery.accent_phrases;
+        const count = phrases.length;
+
+        for (let p = 0; p < count; p++) {
+          const phrase = phrases[p];
+          const moras = Array.isArray(phrase.moras) ? phrase.moras : [];
+
+          // 1. Only pause at REAL user commas (pause_mora): 140ms for stutter "べっ、", 240ms for normal comma "最近、" / "へぇー、"
+          if (phrase.pause_mora && typeof phrase.pause_mora.vowel_length === 'number') {
+            const isStutter = moras.length <= 2 && moras[moras.length - 1]?.text === 'っ';
+            phrase.pause_mora.vowel_length = isStutter ? 0.14 : 0.24;
+          }
+        }
+
+        // 2. Questions (?) ONLY get native interrogative inflection; NEVER lift final mora pitch on (!) because that turns "すごい！" into a question "すごい？"
+        const lastPhrase = phrases[count - 1];
+        if (isQuestion && lastPhrase) {
+          lastPhrase.is_interrogative = true;
+        } else if (isExclaim && phrases[0]?.moras?.length > 0) {
+          // On exclamations (!), boost the OPENING accented moras (e.g. "わー" in "わーい！", "すご" in "すごい！") so it sounds excited, NOT questioning!
+          const firstMoras = phrases[0].moras;
+          for (let m = 0; m < Math.min(2, firstMoras.length); m++) {
+            if (typeof firstMoras[m].pitch === 'number' && firstMoras[m].pitch > 0) {
+              firstMoras[m].pitch = Number((firstMoras[m].pitch * 1.05).toFixed(4));
+            }
+          }
+        }
+      }
+
+      const synthRes = await fetch(
+        `${cleanUrl}/synthesis?speaker=${encodeURIComponent(String(speakerId))}`,
+        {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', Accept: 'audio/wav' },
+          body: JSON.stringify(audioQuery),
+        }
+      );
+      if (!synthRes.ok) {
+        throw new Error(`VOICEVOX synthesis HTTP ${synthRes.status}`);
+      }
+      const wavPart = Buffer.from(await synthRes.arrayBuffer());
+      if (wavPart.length > 44) {
+        if (wavPart.slice(0, 4).toString('ascii') === 'RIFF') {
+          detectedSampleRate = wavPart.readUInt32LE(24) || 24000;
+        }
+        wavBuffers.push(wavPart);
+        if (seg.pauseMs > 0) {
+          wavBuffers.push(createWavSilence(seg.pauseMs, detectedSampleRate));
+        }
+      }
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  if (wavBuffers.length === 0) {
+    throw new Error('VOICEVOX mengembalikan audio kosong');
+  }
+  const merged = mergeAudioBuffers(wavBuffers);
+  const duration = estimateWavDurationSec(merged.buffer) ?? estimateDurationSec(text, settings.speed);
+  return {
+    buffer: merged.buffer,
+    duration,
+    format: 'wav',
+    engine: `VOICEVOX Lokal (Speaker #${speakerId})`,
+  };
 }
 
 // Gemini 2.5 Flash Preview TTS via Google AI Studio REST API (pure HTTPS, 24kHz PCM -> WAV)
@@ -629,41 +1024,6 @@ export async function synthesizeSpeech(
         pitch: Math.max(-35, Math.min(50, settings.pitch)),
       };
 
-  // Optional Tier 0A: Official ElevenLabs API
-  if (appSettings.ttsProvider === 'elevenlabs-api' && appSettings.elevenLabsApiKey) {
-    try {
-      const elevenVoiceId = '21m00Tcm4TlvDq8ikWAM';
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenVoiceId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': appSettings.elevenLabsApiKey,
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: {
-            stability: settings.stability / 100,
-            similarity_boost: settings.similarity / 100,
-            style: settings.styleExaggeration / 100,
-            use_speaker_boost: settings.speakerBoost,
-          },
-        }),
-      });
-      if (res.ok) {
-        const buffer = Buffer.from(await res.arrayBuffer());
-        return {
-          buffer,
-          duration: estimateDurationSec(cleanText, settings.speed),
-          format: 'mp3',
-          engine: 'ElevenLabs Multilingual v2',
-        };
-      }
-    } catch (e) {
-      console.warn('ElevenLabs API failed, falling back to Neural Edge TTS:', e);
-    }
-  }
-
   // Optional Tier 0B: OpenAI TTS API
   if (appSettings.ttsProvider === 'openai-api' && appSettings.openAiApiKey) {
     try {
@@ -696,6 +1056,7 @@ export async function synthesizeSpeech(
 
   const geminiKey = (appSettings.geminiApiKey || process.env.GEMINI_API_KEY || '').trim();
   const freeTtsKey = (appSettings.freeTtsApiKey || process.env.FREETTS_API_KEY || '').trim();
+  const elevenKey = (appSettings.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY || '').trim();
   const voicevoxUrl = (appSettings.voicevoxUrl || process.env.VOICEVOX_URL || 'http://127.0.0.1:50021').trim();
   const preferred = appSettings.ttsProvider;
 
@@ -710,14 +1071,101 @@ export async function synthesizeSpeech(
           ? hints.voicevoxSpeakerId
           : 0;
     try {
-      return await synthesizeVoicevox(cleanText, speakerId, settings, voicevoxUrl);
+      return await synthesizeVoicevox(cleanText, speakerId, settings, voicevoxUrl, geminiKey);
     } catch (vvErr: any) {
-      console.warn('VOICEVOX local engine error:', vvErr?.message || vvErr);
+      const msg = String(vvErr?.message || vvErr);
+      console.warn('VOICEVOX local engine error:', msg);
+      if (vvErr?.name === 'AbortError' || msg.includes('aborted')) {
+        throw new Error(
+          'VOICEVOX butuh waktu terlalu lama memuat model suara ini (timeout). Coba klik Generate sekali lagi atau gunakan teks lebih pendek.'
+        );
+      }
+      if (msg.includes('VOICEVOX audio_query HTTP') || msg.includes('VOICEVOX synthesis HTTP')) {
+        throw new Error(`VOICEVOX gagal memproses suara (${msg}). Coba pilih karakter/speaker lain.`);
+      }
       throw new Error(
-        `VOICEVOX belum berjalan di ${voicevoxUrl}. Buka aplikasi VOICEVOX di Mac Anda terlebih dahulu, lalu coba lagi.`
+        `VOICEVOX Engine belum aktif di ${voicevoxUrl}. Double-click VoiceLab.command di Desktop untuk menyalakannya otomatis.`
       );
     }
   }
+
+  const isLocalEnv = !Boolean(
+    process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
+  );
+  const isJapaneseVoice =
+    hints?.accent === 'Anime JP' ||
+    typeof hints?.voicevoxSpeakerId === 'number' ||
+    voiceEdgeId.toLowerCase().startsWith('ja-');
+
+  // For Japanese voices on Edge Neural / FreeTTS / ElevenLabs, convert Romaji -> natural Kanji+Katakana first
+  const getNormalizedTextForNeural = async (): Promise<string> => {
+    if (!isJapaneseVoice) return cleanText;
+    try {
+      const segs = await buildExpressiveSegments(cleanText);
+      return segs.map((s) => s.jp).join(' ');
+    } catch {
+      return romajiToAnimeJapanese(cleanText);
+    }
+  };
+
+  // ElevenLabs Multilingual v2 Synthesis (supports distinct character voices + Japanese/Indonesian/English)
+  const tryElevenLabs = async () => {
+    if (!elevenKey) {
+      if (preferred === 'elevenlabs-api') {
+        fallbackNotice = 'API key ElevenLabs belum diisi — otomatis pindah ke cadangan.';
+      }
+      return null;
+    }
+    try {
+      const elevenVoiceId = hints?.elevenVoiceId || mapEdgeVoiceToElevenVoice(voiceEdgeId);
+      const neuralText = await getNormalizedTextForNeural();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25000);
+      try {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenVoiceId}`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': elevenKey,
+          },
+          body: JSON.stringify({
+            text: neuralText,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: Math.max(0.25, Math.min(0.95, settings.stability / 100)),
+              similarity_boost: Math.max(0.4, Math.min(0.95, settings.similarity / 100)),
+              style: Math.max(0, Math.min(0.85, settings.styleExaggeration / 100)),
+              use_speaker_boost: settings.speakerBoost,
+            },
+          }),
+        });
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          throw new Error(`ElevenLabs HTTP ${res.status}: ${errBody.slice(0, 120)}`);
+        }
+        const buffer = Buffer.from(await res.arrayBuffer());
+        if (buffer.length < 256) throw new Error('ElevenLabs mengembalikan audio kosong');
+        return {
+          buffer,
+          duration: estimateDurationSec(cleanText, settings.speed),
+          format: 'mp3' as const,
+          engine: 'ElevenLabs Multilingual v2',
+          ...(fallbackNotice ? { fallbackNotice } : {}),
+        };
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      console.warn('ElevenLabs API failed, falling back:', msg);
+      fallbackNotice =
+        msg.includes('429') || msg.includes('quota')
+          ? 'Kuota ElevenLabs sedang limit (429) — otomatis pindah ke cadangan.'
+          : 'ElevenLabs gagal merespons — otomatis pindah ke cadangan.';
+      return null;
+    }
+  };
 
   // Build ordered cloud provider chain based on user's chosen provider (with transparent fallback notices!)
   const tryGemini = async () => {
@@ -728,18 +1176,43 @@ export async function synthesizeSpeech(
       return null;
     }
     try {
-      return await synthesizeGeminiTts(cleanText, voiceEdgeId, tunedSettings, geminiKey, hints);
+      const res = await synthesizeGeminiTts(cleanText, voiceEdgeId, tunedSettings, geminiKey, hints);
+      return fallbackNotice ? { ...res, fallbackNotice } : res;
     } catch (e: any) {
       const msg = String(e?.message || e);
       console.warn('Gemini TTS failed, falling back:', msg);
       fallbackNotice = msg.includes('429')
-        ? 'Kuota gratis Gemini sedang limit (429) — otomatis pindah ke FreeTTS.'
-        : 'Gemini gagal merespons — otomatis pindah ke FreeTTS.';
+        ? 'Kuota gratis Gemini sedang limit (429) — otomatis pindah ke cadangan.'
+        : 'Gemini gagal merespons — otomatis pindah ke cadangan.';
+      return null;
+    }
+  };
+
+  // On local Mac, Microsoft Edge Neural TTS uses the EXACT same voices as FreeTTS (ja-JP-MayuNeural / NanamiNeural / ShioriNeural)
+  // but with ZERO 4.5s English watermark and ZERO daily quota limit!
+  const tryLocalEdgeNeural = async () => {
+    if (!isLocalEnv) return null;
+    try {
+      const neuralText = await getNormalizedTextForNeural();
+      const buffer = await runEdgeNeuralSingle(neuralText, voiceEdgeId, tunedSettings, false);
+      return {
+        buffer,
+        duration: estimateDurationSec(cleanText, settings.speed),
+        format: 'mp3' as const,
+        engine: 'Neural Turbo v2.5 (Zero-Watermark)',
+        ...(fallbackNotice ? { fallbackNotice } : {}),
+      };
+    } catch (e: any) {
+      console.warn('Local Edge Neural failed:', e?.message || e);
       return null;
     }
   };
 
   const tryFreeTts = async () => {
+    if (isLocalEnv) {
+      const localRes = await tryLocalEdgeNeural();
+      if (localRes) return localRes;
+    }
     if (!freeTtsKey) {
       if (preferred === 'freetts-api') {
         fallbackNotice = 'API key FreeTTS belum diisi — otomatis pindah ke cadangan.';
@@ -747,7 +1220,8 @@ export async function synthesizeSpeech(
       return null;
     }
     try {
-      const res = await synthesizeFreeTts(cleanText, voiceEdgeId, tunedSettings, freeTtsKey);
+      const neuralText = await getNormalizedTextForNeural();
+      const res = await synthesizeFreeTts(neuralText, voiceEdgeId, tunedSettings, freeTtsKey);
       return fallbackNotice ? { ...res, fallbackNotice } : res;
     } catch (e: any) {
       const msg = String(e?.message || e);
@@ -759,25 +1233,43 @@ export async function synthesizeSpeech(
     }
   };
 
-  if (preferred === 'gemini-tts') {
-    const r1 = await tryGemini();
-    if (r1) return r1;
-    const r2 = await tryFreeTts();
-    if (r2) return r2;
-  } else if (preferred === 'freetts-api') {
-    const r1 = await tryFreeTts();
+  if (preferred === 'elevenlabs-api') {
+    const r1 = await tryElevenLabs();
     if (r1) return r1;
     const r2 = await tryGemini();
     if (r2) return r2;
+    const r3 = await tryFreeTts();
+    if (r3) return r3;
+  } else if (preferred === 'gemini-tts') {
+    const r1 = await tryGemini();
+    if (r1) return r1;
+    const r2 = await tryElevenLabs();
+    if (r2) return r2;
+    const r3 = await tryFreeTts();
+    if (r3) return r3;
+  } else if (preferred === 'freetts-api') {
+    const r1 = await tryFreeTts();
+    if (r1) return r1;
+    const r2 = await tryElevenLabs();
+    if (r2) return r2;
+    const r3 = await tryGemini();
+    if (r3) return r3;
   } else {
+    // Auto mode: 1. ElevenLabs (if voice is ElevenLabs or key active) / Gemini -> 2. FreeTTS / Edge Neural
+    if (hints?.accent === 'ElevenLabs' && elevenKey) {
+      const r0 = await tryElevenLabs();
+      if (r0) return r0;
+    }
     if (geminiKey) {
       const r1 = await tryGemini();
       if (r1) return r1;
     }
-    if (freeTtsKey) {
-      const r2 = await tryFreeTts();
+    if (elevenKey) {
+      const r2 = await tryElevenLabs();
       if (r2) return r2;
     }
+    const r3 = await tryFreeTts();
+    if (r3) return r3;
   }
 
   const isServerless = Boolean(
