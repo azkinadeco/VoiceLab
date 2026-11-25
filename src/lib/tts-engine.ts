@@ -1,4 +1,3 @@
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { GenerationSettings, AppSettings } from './types';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
@@ -216,6 +215,7 @@ async function runEdgeNeuralSingle(
   settings: GenerationSettings,
   isServerless = false
 ): Promise<Buffer> {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
   const connTimeout = isServerless ? 3500 : 8000;
   const synthTimeout = isServerless ? 6000 : 22000;
   const tts = new MsEdgeTTS({
@@ -377,13 +377,36 @@ export async function synthesizeSpeech(
     }
   }
 
-  // Tier 1: Microsoft Edge Neural TTS (fast-fail on Vercel/serverless so it never hits 10s gateway timeout)
-  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY);
-  const maxAttempts = isServerless ? 1 : 2;
-  let targetEdgeId = voiceEdgeId;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  const isServerless = Boolean(
+    process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
+  );
+
+  // On Vercel/serverless, use pure-HTTPS Google Neural TTS first (fast ~0.3s, zero WebSocket crashes)
+  if (isServerless) {
     try {
-      const buffer = await runEdgeNeuralSingle(cleanText, targetEdgeId, settings, isServerless);
+      return await synthesizeGoogleNeuralFallback(cleanText, voiceEdgeId, settings);
+    } catch (googleErr: any) {
+      console.warn('Google Neural TTS (Vercel primary) failed:', googleErr?.message || googleErr);
+    }
+    try {
+      const buffer = await runEdgeNeuralSingle(cleanText, voiceEdgeId, settings, true);
+      return {
+        buffer,
+        duration: estimateDurationSec(cleanText, settings.speed),
+        format: 'mp3',
+        engine: 'Neural Turbo v2.5 (Cloud)',
+      };
+    } catch (edgeErr: any) {
+      console.warn('Edge Neural TTS (Vercel fallback) failed:', edgeErr?.message || edgeErr);
+      throw new Error('Semua engine TTS online gagal merespons. Silakan coba lagi beberapa saat.');
+    }
+  }
+
+  // On local PC: Tier 1 = Microsoft Edge Neural TTS (28 distinct neural voices)
+  let targetEdgeId = voiceEdgeId;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const buffer = await runEdgeNeuralSingle(cleanText, targetEdgeId, settings, false);
       return {
         buffer,
         duration: estimateDurationSec(cleanText, settings.speed),

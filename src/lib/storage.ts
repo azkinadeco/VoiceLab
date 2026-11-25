@@ -493,14 +493,16 @@ export async function saveAudioFile(
   category: keyof typeof SUB_DIRS,
   filename: string
 ): Promise<{ filePath: string; relativeUrl: string }> {
-  initStorage();
   const targetDir = SUB_DIRS[category];
   const filePath = path.join(targetDir, filename);
-  fs.writeFileSync(filePath, buffer);
 
   // On Vercel/serverless, /tmp is ephemeral and not shared across instances.
-  // Return an inline data URI so playback, waveform, download, and trimmer always work without 404.
+  // Always return an inline data URI so playback, waveform, download, and trimmer work without 404.
   if (IS_SERVERLESS && buffer.length <= 4 * 1024 * 1024) {
+    try {
+      initStorage();
+      fs.writeFileSync(filePath, buffer);
+    } catch {}
     const ext = path.extname(filename).toLowerCase();
     const isWav = buffer.slice(0, 4).toString('ascii') === 'RIFF' || ext === '.wav';
     const mime = isWav
@@ -516,6 +518,8 @@ export async function saveAudioFile(
     };
   }
 
+  initStorage();
+  fs.writeFileSync(filePath, buffer);
   const relativeUrl = `/api/storage?file=${category}/${filename}`;
   return { filePath, relativeUrl };
 }
