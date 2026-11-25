@@ -275,8 +275,14 @@ export default function TextToSpeech({
         signal: controller.signal,
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal generate suara');
+      const rawText = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Server mengembalikan respons non-JSON (HTTP ${res.status}): ${rawText.slice(0, 120)}`);
+      }
+      if (!res.ok) throw new Error(data?.error || `Gagal generate suara (HTTP ${res.status})`);
 
       setLastGen(data.generation);
       onGenerationCreated(data.generation);

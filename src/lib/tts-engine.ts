@@ -213,11 +213,14 @@ function synthesizeMacNativeOffline(
 async function runEdgeNeuralSingle(
   cleanText: string,
   voiceEdgeId: string,
-  settings: GenerationSettings
+  settings: GenerationSettings,
+  isServerless = false
 ): Promise<Buffer> {
+  const connTimeout = isServerless ? 3500 : 8000;
+  const synthTimeout = isServerless ? 6000 : 22000;
   const tts = new MsEdgeTTS({
-    connectionTimeoutMs: 8000,
-    synthesisTimeoutMs: 25000,
+    connectionTimeoutMs: connTimeout,
+    synthesisTimeoutMs: synthTimeout,
   });
   const format = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
 
@@ -255,7 +258,7 @@ async function runEdgeNeuralSingle(
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error('Edge TTS stream timeout'));
-      }, 22000);
+      }, synthTimeout);
 
       audioStream.on('data', (chunk: Buffer) => {
         chunks.push(chunk);
@@ -374,11 +377,13 @@ export async function synthesizeSpeech(
     }
   }
 
-  // Tier 1: Microsoft Edge Neural TTS (with XML escaping & automatic retry)
+  // Tier 1: Microsoft Edge Neural TTS (fast-fail on Vercel/serverless so it never hits 10s gateway timeout)
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY);
+  const maxAttempts = isServerless ? 1 : 2;
   let targetEdgeId = voiceEdgeId;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const buffer = await runEdgeNeuralSingle(cleanText, targetEdgeId, settings);
+      const buffer = await runEdgeNeuralSingle(cleanText, targetEdgeId, settings, isServerless);
       return {
         buffer,
         duration: estimateDurationSec(cleanText, settings.speed),
