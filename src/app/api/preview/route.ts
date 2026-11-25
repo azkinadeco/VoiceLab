@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
         sampleText = `Hello there! I am ${voice.name}, speaking with a crisp British RP accent for your narrations and documentaries.`;
       } else if (accentLower.includes('australian')) {
         sampleText = `G'day! I'm ${voice.name}, bringing a relaxed Australian cadence to your podcasts and stories.`;
+      } else if (accentLower.includes('anime')) {
+        sampleText = `おかえりなさい、司令官。今日も一緒に戦いましょうね！`;
       } else if (accentLower.includes('japanese')) {
         sampleText = `こんにちは！私は${voice.name}です。自然でクリアな日本語の音声をお届けします。`;
       } else if (accentLower.includes('korean')) {
@@ -42,13 +44,17 @@ export async function POST(request: NextRequest) {
       voice.voiceIdEdge,
       {
         speed: 1.0,
-        pitch: 0,
+        pitch: voice.pitchOffset || 0,
         stability: 80,
         similarity: 85,
         styleExaggeration: 10,
         speakerBoost: true,
       },
-      appSettings
+      appSettings,
+      {
+        geminiVoice: voice.geminiVoice,
+        actingDirection: voice.actingDirection,
+      }
     );
 
     const isWav = buffer.slice(0, 4).toString('ascii') === 'RIFF';

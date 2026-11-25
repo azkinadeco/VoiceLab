@@ -11,6 +11,8 @@ export interface Voice {
   avatarGradient?: string;
   avatarEmoji?: string;
   voiceIdEdge: string;
+  geminiVoice?: string;
+  actingDirection?: string;
   labels: {
     age?: 'young' | 'middle-aged' | 'old';
     useCase?: string;
@@ -30,6 +32,7 @@ export interface GenerationSettings {
   similarity: number; // 0 to 100
   styleExaggeration: number; // 0 to 100
   speakerBoost: boolean;
+  emotionStyle?: string; // e.g. 'gentle' | 'cheerful' | 'sad' | 'rough' | 'angry' | 'mature' | 'seductive' | 'cold' | 'battle'
 }
 
 export interface Generation {

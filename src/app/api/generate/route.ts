@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       similarity: settings?.similarity ?? 80,
       styleExaggeration: settings?.styleExaggeration ?? 0,
       speakerBoost: settings?.speakerBoost ?? true,
+      emotionStyle: settings?.emotionStyle || undefined,
     };
 
     const savedAppSettings = getAppSettings();
@@ -93,7 +94,11 @@ export async function POST(request: NextRequest) {
       processedText,
       targetVoice.voiceIdEdge || 'en-US-ChristopherNeural',
       effectiveSettings,
-      appSettings
+      appSettings,
+      {
+        geminiVoice: targetVoice.geminiVoice,
+        actingDirection: targetVoice.actingDirection,
+      }
     );
 
     const filename = `${genId}.${format}`;

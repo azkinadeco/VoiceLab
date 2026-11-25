@@ -57,6 +57,29 @@ const EXPRESSION_PRESETS = [
   { label: 'Lembut', speed: 0.9, pitch: -4, stability: 85, style: 10 },
 ];
 
+const ANIME_EMOTIONS = [
+  { id: '', label: 'Default' },
+  { id: 'gentle', label: '🌸 Lembut' },
+  { id: 'cheerful', label: '⚡ Ceria' },
+  { id: 'sad', label: '💧 Sedih' },
+  { id: 'rough', label: '😤 Kasar' },
+  { id: 'angry', label: '🔥 Marah' },
+  { id: 'mature', label: '👑 Dewasa' },
+  { id: 'seductive', label: '💋 Menggoda' },
+  { id: 'cold', label: '❄️ Dingin' },
+  { id: 'battle', label: '⚔️ Battle' },
+];
+
+const ANIME_GAME_LINES = [
+  { label: 'Greet', text: 'おかえりなさい、司令官。今日も一緒に戦いましょうね！' },
+  { label: 'Tsundere', text: 'ふん、やっと来たのね。べ、別に待ってなんかいないんだから！' },
+  { label: 'Menggoda', text: 'あら、いい子ね。こっちにいらっしゃい…今夜も私に会いに来たの？' },
+  { label: 'Sedih', text: 'お願い…もう二度と、私を一人にしないで…' },
+  { label: 'Marah / Skill', text: '覚悟しなさい！竜の炎よ、すべてを焼き尽くせ！' },
+  { label: 'Dingin', text: '…潮が、あなたの帰りを知らせてくれた。邪魔はさせない。' },
+  { label: 'Win', text: '当然の結果よ。私を誰だと思ってるの？' },
+];
+
 const DEFAULT_SETTINGS: GenerationSettings = {
   speed: 1.0,
   pitch: 0,
@@ -172,7 +195,7 @@ export default function TextToSpeech({
 
   // Floating popovers & collapsible extras (hidden by default for clean mobile layout)
   const [showProsodyPopover, setShowProsodyPopover] = useState(false);
-  const [showExtras, setShowExtras] = useState<'none' | 'duration' | 'cta'>('none');
+  const [showExtras, setShowExtras] = useState<'none' | 'duration' | 'cta' | 'anime'>('none');
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [targetId, setTargetId] = useState<string>('tiktok15');
   const [quickVoiceIds, setQuickVoiceIds] = useState<string[]>([]);
@@ -365,6 +388,8 @@ export default function TextToSpeech({
 
   const accentChips = ACCENT_CATEGORIES.filter((a) => a.id !== 'all');
   const isPreviewing = previewingVoiceId === selectedVoice.id;
+  const isAnimeMode = selectedVoice.accent === 'Anime JP' || selectedVoice.language === 'Japanese';
+  const animeVoices = voices.filter((v) => v.accent === 'Anime JP');
 
   return (
     <div className={`space-y-3 mx-auto ${isIphoneMode ? 'max-w-full' : 'max-w-2xl'}`}>
@@ -503,6 +528,57 @@ export default function TextToSpeech({
           })}
         </div>
 
+        {/* Anime JP quick character + emotion strip (only shown when Anime JP / Japanese voice is active) */}
+        {isAnimeMode && (
+          <div className="px-3 pt-1.5 space-y-1.5 animate-fadeIn">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {animeVoices.map((v) => {
+                const active = selectedVoice.id === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => {
+                      haptic(6);
+                      onSelectVoice(v);
+                    }}
+                    className={`flex shrink-0 h-8 items-center gap-1.5 rounded-full pl-1 pr-2.5 text-[11.5px] font-semibold transition-all active:scale-95 ${
+                      active
+                        ? 'bg-pink-500/25 ring-1 ring-pink-400 text-white'
+                        : 'bg-white/[0.04] text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    <img src={v.avatarUrl} alt="" className="h-6 w-6 rounded-full" />
+                    <span>{v.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {ANIME_EMOTIONS.map((em) => {
+                const active = (settings.emotionStyle || '') === em.id;
+                return (
+                  <button
+                    key={em.id || 'default'}
+                    type="button"
+                    onClick={() => {
+                      haptic(5);
+                      setSettings({ ...settings, emotionStyle: em.id || undefined });
+                    }}
+                    className={`shrink-0 h-7 rounded-full px-2.5 text-[11.5px] font-medium transition-all active:scale-95 ${
+                      active
+                        ? 'bg-white text-black font-semibold'
+                        : 'bg-white/[0.05] text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    {em.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Clean Text Canvas */}
         <textarea
           rows={4}
@@ -514,6 +590,23 @@ export default function TextToSpeech({
 
         {/* Compact interactive tool strip (replaces bulky always-open boxes) */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pb-2.5">
+          {isAnimeMode && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic(5);
+                setShowExtras(showExtras === 'anime' ? 'none' : 'anime');
+              }}
+              className={`flex shrink-0 h-8 items-center gap-1 rounded-full border px-2.5 text-[12px] font-semibold transition-all active:scale-95 ${
+                showExtras === 'anime'
+                  ? 'bg-pink-500 text-white border-pink-400'
+                  : 'bg-pink-500/15 border-pink-500/30 text-pink-200'
+              }`}
+            >
+              🎌 Dialog JP
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setIsTemplateOpen(true)}
@@ -607,6 +700,25 @@ export default function TextToSpeech({
                 <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${targetPct}%` }} />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Collapsible: Anime JP Game Dialogues */}
+        {showExtras === 'anime' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pb-2.5 animate-fadeIn">
+            {ANIME_GAME_LINES.map((line) => (
+              <button
+                key={line.label}
+                type="button"
+                onClick={() => {
+                  haptic(6);
+                  setText(line.text);
+                }}
+                className="shrink-0 h-8 rounded-full bg-pink-500/15 px-3 text-[12px] font-medium text-pink-200 hover:bg-pink-500/25 active:scale-95 transition-all"
+              >
+                {line.label}
+              </button>
+            ))}
           </div>
         )}
 

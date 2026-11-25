@@ -338,16 +338,75 @@ function mapEdgeVoiceToGeminiVoice(voiceEdgeId: string): string {
   return 'Puck';
 }
 
+const EMOTION_DIRECTIONS: Record<string, { cue: string; speedMul: number; pitchAdd: number }> = {
+  gentle: {
+    cue: 'Speak in Japanese with a very gentle, warm, soft, soothing anime female voice',
+    speedMul: 0.94,
+    pitchAdd: 1,
+  },
+  cheerful: {
+    cue: 'Speak in Japanese with a bright, super cheerful, bubbly genki anime girl voice',
+    speedMul: 1.08,
+    pitchAdd: 5,
+  },
+  sad: {
+    cue: 'Speak in Japanese with a fragile, tearful, slow, melancholic anime girl voice',
+    speedMul: 0.85,
+    pitchAdd: -3,
+  },
+  rough: {
+    cue: 'Speak in Japanese with a sharp, feisty, slightly rough tsundere anime girl voice',
+    speedMul: 1.05,
+    pitchAdd: 2,
+  },
+  angry: {
+    cue: 'Speak in Japanese with a fierce, angry, intense, shouting anime warrior girl voice',
+    speedMul: 1.12,
+    pitchAdd: 3,
+  },
+  mature: {
+    cue: 'Speak in Japanese with a deep, mature, poised, regal anime onee-san empress voice',
+    speedMul: 0.92,
+    pitchAdd: -6,
+  },
+  seductive: {
+    cue: 'Speak in Japanese with a sultry, teasing, breathy, playful ara-ara seductive anime woman voice',
+    speedMul: 0.88,
+    pitchAdd: -4,
+  },
+  cold: {
+    cue: 'Speak in Japanese with a cool, quiet, emotionless, mysterious kuudere anime girl voice',
+    speedMul: 0.9,
+    pitchAdd: -3,
+  },
+  battle: {
+    cue: 'Speak in Japanese like an anime RPG heroine passionately shouting a special attack skill in battle',
+    speedMul: 1.14,
+    pitchAdd: 4,
+  },
+};
+
+export interface VoiceSynthesisHints {
+  geminiVoice?: string;
+  actingDirection?: string;
+}
+
 // Gemini 2.5 Flash Preview TTS via Google AI Studio REST API (pure HTTPS, 24kHz PCM -> WAV)
 async function synthesizeGeminiTts(
   text: string,
   voiceEdgeId: string,
   settings: GenerationSettings,
-  apiKey: string
+  apiKey: string,
+  hints?: VoiceSynthesisHints
 ): Promise<SynthesisResult> {
-  const voiceName = mapEdgeVoiceToGeminiVoice(voiceEdgeId);
+  const voiceName = hints?.geminiVoice || mapEdgeVoiceToGeminiVoice(voiceEdgeId);
+  const emo = settings.emotionStyle ? EMOTION_DIRECTIONS[settings.emotionStyle] : undefined;
   let promptText = text;
-  if (settings.styleExaggeration >= 45) {
+  if (emo) {
+    promptText = `${emo.cue}: ${text}`;
+  } else if (hints?.actingDirection) {
+    promptText = `${hints.actingDirection}: ${text}`;
+  } else if (settings.styleExaggeration >= 45) {
     promptText = `Say enthusiastically and expressively: ${text}`;
   } else if (settings.speed >= 1.2) {
     promptText = `Say at a brisk, energetic pace: ${text}`;
@@ -486,9 +545,18 @@ export async function synthesizeSpeech(
   text: string,
   voiceEdgeId: string,
   settings: GenerationSettings,
-  appSettings: AppSettings
+  appSettings: AppSettings,
+  hints?: VoiceSynthesisHints
 ): Promise<SynthesisResult> {
   const cleanText = text.trim();
+  const emo = settings.emotionStyle ? EMOTION_DIRECTIONS[settings.emotionStyle] : undefined;
+  const tunedSettings: GenerationSettings = emo
+    ? {
+        ...settings,
+        speed: Math.max(0.6, Math.min(1.8, settings.speed * emo.speedMul)),
+        pitch: Math.max(-25, Math.min(25, settings.pitch + emo.pitchAdd)),
+      }
+    : settings;
 
   // Optional Tier 0A: Official ElevenLabs API
   if (appSettings.ttsProvider === 'elevenlabs-api' && appSettings.elevenLabsApiKey) {
@@ -563,7 +631,7 @@ export async function synthesizeSpeech(
   const tryGemini = async () => {
     if (!geminiKey) return null;
     try {
-      return await synthesizeGeminiTts(cleanText, voiceEdgeId, settings, geminiKey);
+      return await synthesizeGeminiTts(cleanText, voiceEdgeId, tunedSettings, geminiKey, hints);
     } catch (e: any) {
       console.warn('Gemini TTS failed, falling back:', e?.message || e);
       return null;
@@ -573,7 +641,7 @@ export async function synthesizeSpeech(
   const tryFreeTts = async () => {
     if (!freeTtsKey) return null;
     try {
-      return await synthesizeFreeTts(cleanText, voiceEdgeId, settings, freeTtsKey);
+      return await synthesizeFreeTts(cleanText, voiceEdgeId, tunedSettings, freeTtsKey);
     } catch (e: any) {
       console.warn('FreeTTS API failed, falling back:', e?.message || e);
       return null;
