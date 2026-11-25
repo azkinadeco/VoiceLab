@@ -143,6 +143,7 @@ export default function TextToSpeech({
   const [settings, setSettings] = useState<GenerationSettings>(DEFAULT_SETTINGS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const [lastGen, setLastGen] = useState<Generation | null>(null);
   const [reuseNotice, setReuseNotice] = useState<string | null>(null);
   const [copiedTextNotice, setCopiedTextNotice] = useState(false);
@@ -256,10 +257,20 @@ export default function TextToSpeech({
 
     setPreviewingVoiceId(voice.id);
     try {
+      let clientKeys: Record<string, string> | undefined;
+      try {
+        const raw = localStorage.getItem('voicelab_client_keys');
+        if (raw) clientKeys = JSON.parse(raw);
+      } catch {}
+
       const res = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voiceId: voice.id }),
+        body: JSON.stringify({
+          voiceId: voice.id,
+          provider: ttsEngine === 'auto' ? undefined : ttsEngine,
+          clientKeys,
+        }),
       });
       if (!res.ok) throw new Error('Gagal memuat sampel');
       const blob = await res.blob();
@@ -286,6 +297,7 @@ export default function TextToSpeech({
     if (!text.trim() || isGenerating) return;
     setIsGenerating(true);
     setErrorMsg(null);
+    setFallbackNotice(null);
     setShowProsodyPopover(false);
 
     const controller = new AbortController();
@@ -322,6 +334,7 @@ export default function TextToSpeech({
       if (!res.ok) throw new Error(data?.error || `Gagal generate suara (HTTP ${res.status})`);
 
       setLastGen(data.generation);
+      setFallbackNotice(data.fallbackNotice || null);
       onGenerationCreated(data.generation);
       pushRecentVoice(selectedVoice.id);
       haptic([10, 40, 10]);
@@ -816,6 +829,12 @@ export default function TextToSpeech({
       {/* ================= RESULT CARD ================= */}
       {lastGen && (
         <div className="studio-card rounded-3xl p-3 sm:p-4 space-y-3 animate-fadeIn">
+          {fallbackNotice && (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-500/15 px-3 py-2 text-[12px] text-amber-200">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+              <span>{fallbackNotice}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 px-1">
             <img src={lastGen.voiceAvatar} alt="" className="h-8 w-8 rounded-full object-cover" />
             <div className="min-w-0 flex-1">

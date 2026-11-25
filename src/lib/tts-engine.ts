@@ -9,6 +9,7 @@ export interface SynthesisResult {
   duration: number;
   format: 'mp3' | 'wav';
   engine: string;
+  fallbackNotice?: string;
 }
 
 function escapeXmlForSsml(raw: string): string {
@@ -417,63 +418,71 @@ async function synthesizeGeminiTts(
     promptText = `Say calmly and softly: ${text}`;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${encodeURIComponent(
-      apiKey
-    )}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName },
+  const modelsToTry = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'];
+  let lastErr: Error | null = null;
+
+  for (const modelName of modelsToTry) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(
+        apiKey
+      )}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName },
+              },
             },
           },
-        },
-      }),
-    });
+        }),
+      });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Gemini TTS HTTP ${res.status}: ${errText.slice(0, 160)}`);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        lastErr = new Error(`Gemini ${modelName} HTTP ${res.status}: ${errText.slice(0, 140)}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const part = data?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data);
+      const b64 = part?.inlineData?.data;
+      const mime: string = part?.inlineData?.mimeType || '';
+      if (!b64) {
+        lastErr = new Error(`Gemini ${modelName} tidak mengembalikan data audio`);
+        continue;
+      }
+
+      const rawBuf = Buffer.from(b64, 'base64');
+      if (rawBuf.length < 256) {
+        lastErr = new Error(`Gemini ${modelName} mengembalikan audio kosong`);
+        continue;
+      }
+
+      const rateMatch = mime.match(/rate=(\d+)/i);
+      const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+      const isAlreadyWav = rawBuf.slice(0, 4).toString('ascii') === 'RIFF';
+      const wavBuffer = isAlreadyWav ? rawBuf : wrapPcmAsWav(rawBuf, sampleRate, 1, 16);
+      const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
+
+      return {
+        buffer: wavBuffer,
+        duration,
+        format: 'wav',
+        engine: `${modelName.includes('pro') ? 'Gemini 2.5 Pro TTS' : 'Gemini 2.5 Flash TTS'} (${voiceName})`,
+      };
+    } finally {
+      clearTimeout(timer);
     }
-
-    const data = await res.json();
-    const part = data?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data);
-    const b64 = part?.inlineData?.data;
-    const mime: string = part?.inlineData?.mimeType || '';
-    if (!b64) {
-      throw new Error('Gemini TTS tidak mengembalikan data audio');
-    }
-
-    const rawBuf = Buffer.from(b64, 'base64');
-    if (rawBuf.length < 256) {
-      throw new Error('Gemini TTS mengembalikan audio kosong');
-    }
-
-    // Parse sample rate from mimeType e.g. "audio/L16;codec=pcm;rate=24000"
-    const rateMatch = mime.match(/rate=(\d+)/i);
-    const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-    const isAlreadyWav = rawBuf.slice(0, 4).toString('ascii') === 'RIFF';
-    const wavBuffer = isAlreadyWav ? rawBuf : wrapPcmAsWav(rawBuf, sampleRate, 1, 16);
-    const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
-
-    return {
-      buffer: wavBuffer,
-      duration,
-      format: 'wav',
-      engine: `Gemini 2.5 Flash TTS (${voiceName})`,
-    };
-  } finally {
-    clearTimeout(timer);
   }
+  throw lastErr || new Error('Gemini TTS gagal');
 }
 
 // Tier 0C / Vercel Primary: FreeTTS Neural REST API (https://freetts.org/developers)
@@ -633,23 +642,44 @@ export async function synthesizeSpeech(
   const freeTtsKey = (appSettings.freeTtsApiKey || process.env.FREETTS_API_KEY || '').trim();
   const preferred = appSettings.ttsProvider;
 
-  // Build ordered cloud provider chain based on user's chosen provider (with automatic fallback if rate-limited!)
+  let fallbackNotice: string | undefined;
+
+  // Build ordered cloud provider chain based on user's chosen provider (with transparent fallback notices!)
   const tryGemini = async () => {
-    if (!geminiKey) return null;
+    if (!geminiKey) {
+      if (preferred === 'gemini-tts') {
+        fallbackNotice = 'API key Gemini belum diisi — otomatis pindah ke cadangan.';
+      }
+      return null;
+    }
     try {
       return await synthesizeGeminiTts(cleanText, voiceEdgeId, tunedSettings, geminiKey, hints);
     } catch (e: any) {
-      console.warn('Gemini TTS failed, falling back:', e?.message || e);
+      const msg = String(e?.message || e);
+      console.warn('Gemini TTS failed, falling back:', msg);
+      fallbackNotice = msg.includes('429')
+        ? 'Kuota gratis Gemini sedang limit (429) — otomatis pindah ke FreeTTS.'
+        : 'Gemini gagal merespons — otomatis pindah ke FreeTTS.';
       return null;
     }
   };
 
   const tryFreeTts = async () => {
-    if (!freeTtsKey) return null;
+    if (!freeTtsKey) {
+      if (preferred === 'freetts-api') {
+        fallbackNotice = 'API key FreeTTS belum diisi — otomatis pindah ke cadangan.';
+      }
+      return null;
+    }
     try {
-      return await synthesizeFreeTts(cleanText, voiceEdgeId, tunedSettings, freeTtsKey);
+      const res = await synthesizeFreeTts(cleanText, voiceEdgeId, tunedSettings, freeTtsKey);
+      return fallbackNotice ? { ...res, fallbackNotice } : res;
     } catch (e: any) {
-      console.warn('FreeTTS API failed, falling back:', e?.message || e);
+      const msg = String(e?.message || e);
+      console.warn('FreeTTS API failed, falling back:', msg);
+      fallbackNotice = msg.includes('429')
+        ? 'FreeTTS sedang limit (429) — pindah ke cadangan.'
+        : 'FreeTTS gagal merespons — pindah ke cadangan.';
       return null;
     }
   };
@@ -665,7 +695,6 @@ export async function synthesizeSpeech(
     const r2 = await tryGemini();
     if (r2) return r2;
   } else {
-    // Auto / edge-neural: prefer Gemini if key is set, else FreeTTS if key is set
     if (geminiKey) {
       const r1 = await tryGemini();
       if (r1) return r1;
@@ -680,10 +709,16 @@ export async function synthesizeSpeech(
     process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
   );
 
-  // On Vercel/serverless, use pure-HTTPS Google Neural TTS first (fast ~0.3s, zero WebSocket crashes)
+  // On Vercel/serverless, if both Gemini & FreeTTS failed/missing, Google TTS fallback has only 1 voice per language!
   if (isServerless) {
     try {
-      return await synthesizeGoogleNeuralFallback(cleanText, voiceEdgeId, settings);
+      const gRes = await synthesizeGoogleNeuralFallback(cleanText, voiceEdgeId, settings);
+      return {
+        ...gRes,
+        fallbackNotice:
+          fallbackNotice ||
+          'Fallback ke Google TTS (hanya 1 suara per bahasa). Isi GEMINI_API_KEY / FREETTS_API_KEY agar suara karakter berbeda.',
+      };
     } catch (googleErr: any) {
       console.warn('Google Neural TTS (Vercel primary) failed:', googleErr?.message || googleErr);
     }

@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { synthesizeSpeech } from '@/lib/tts-engine';
 import { getAllVoices, getAppSettings } from '@/lib/storage';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { voiceId, customSampleText } = body;
+    const { voiceId, customSampleText, provider, clientKeys } = body;
 
     const voices = getAllVoices();
     const voice = voices.find((v) => v.id === voiceId) || voices[0];
@@ -38,7 +41,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const appSettings = getAppSettings();
+    const savedSettings = getAppSettings();
+    const appSettings = {
+      ...savedSettings,
+      geminiApiKey: clientKeys?.geminiApiKey || savedSettings.geminiApiKey,
+      freeTtsApiKey: clientKeys?.freeTtsApiKey || savedSettings.freeTtsApiKey,
+      elevenLabsApiKey: clientKeys?.elevenLabsApiKey || savedSettings.elevenLabsApiKey,
+      openAiApiKey: clientKeys?.openAiApiKey || savedSettings.openAiApiKey,
+      ...(provider && ['edge-neural', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
+        ? { ttsProvider: provider }
+        : {}),
+    };
     const { buffer } = await synthesizeSpeech(
       sampleText,
       voice.voiceIdEdge,

@@ -90,10 +90,15 @@ export default function MobileVoiceSheetModal({
         return;
       }
 
+      let clientKeys: Record<string, string> | undefined;
+      try {
+        const raw = localStorage.getItem('voicelab_client_keys');
+        if (raw) clientKeys = JSON.parse(raw);
+      } catch {}
       const res = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voiceId: voice.id }),
+        body: JSON.stringify({ voiceId: voice.id, clientKeys }),
       });
       if (!res.ok) throw new Error('Preview error');
       const blob = await res.blob();

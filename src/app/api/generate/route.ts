@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Synthesize voice
-    const { buffer, duration, format, engine } = await synthesizeSpeech(
+    const { buffer, duration, format, engine, fallbackNotice } = await synthesizeSpeech(
       processedText,
       targetVoice.voiceIdEdge || 'en-US-ChristopherNeural',
       effectiveSettings,
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     addGeneration(newGen);
 
-    return NextResponse.json({ success: true, generation: newGen });
+    return NextResponse.json({ success: true, generation: newGen, fallbackNotice });
   } catch (error: any) {
     console.error('Speech generation error:', error);
     return NextResponse.json(
