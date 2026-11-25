@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Voice } from '@/lib/types';
 import { ACCENT_CATEGORIES } from '@/lib/voices-data';
+import { AccentBadgeIcon } from './CustomIcons';
 import { X, Search, Volume2, Check, UserPlus, Loader2 } from 'lucide-react';
 
 interface VoiceSelectorModalProps {
@@ -187,7 +188,7 @@ export default function VoiceSelectorModal({
                     : 'bg-dark-850 text-dark-300 border-white/10 hover:bg-dark-800 hover:text-white'
                 }`}
               >
-                <span>{acc.flag}</span>
+                <AccentBadgeIcon id={acc.id} className="h-3.5 w-3.5 shrink-0" />
                 <span>{acc.label}</span>
               </button>
             ))}
@@ -199,7 +200,8 @@ export default function VoiceSelectorModal({
                   : 'bg-dark-850 text-dark-300 border-white/10 hover:bg-dark-800 hover:text-white'
               }`}
             >
-              🧬 My Cloned Voices
+              <AccentBadgeIcon id="cloned" className="h-3.5 w-3.5 shrink-0" />
+              <span>My Cloned Voices</span>
             </button>
           </div>
         </div>

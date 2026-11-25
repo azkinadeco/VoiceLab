@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Voice } from '@/lib/types';
 import { ACCENT_CATEGORIES } from '@/lib/voices-data';
+import { AccentBadgeIcon } from './CustomIcons';
 import { Search, Volume2, Check, X, Loader2, Star, Pause } from 'lucide-react';
 import { getFavoriteVoiceIds, toggleFavoriteVoice, onVoicePrefsChange } from '@/lib/voice-prefs';
 import { haptic } from '@/lib/haptics';
@@ -172,7 +173,7 @@ export default function MobileVoiceSheetModal({
               <button
                 key={acc.id}
                 onClick={() => setSelectedAccent(acc.id)}
-                className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all shrink-0 ${
+                className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all shrink-0 ${
                   isSelected
                     ? isAndroid
                       ? 'bg-purple-500 text-black'
@@ -180,7 +181,8 @@ export default function MobileVoiceSheetModal({
                     : 'bg-white/[0.05] text-dark-300 hover:text-white'
                 }`}
               >
-                {acc.flag} {acc.label.replace('English ', '').replace(' (Nasional)', '')}
+                <AccentBadgeIcon id={acc.id} className="h-3.5 w-3.5 shrink-0" />
+                <span>{acc.label.replace('English ', '').replace(' (Nasional)', '')}</span>
               </button>
             );
           })}

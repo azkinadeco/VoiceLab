@@ -11,6 +11,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { ActiveTab } from './Sidebar';
+import { VoiceLabLogoIcon } from './CustomIcons';
 import { haptic } from '@/lib/haptics';
 
 interface HeaderProps {
@@ -146,9 +147,7 @@ export default function Header({
     >
       <div className="flex h-12 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white text-black">
-            <AudioWaveform className="h-[18px] w-[18px]" />
-          </div>
+          <VoiceLabLogoIcon className="h-8 w-8 shrink-0" />
           <h1 className="truncate text-[17px] font-bold tracking-tight text-white">{hub.title}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-2">

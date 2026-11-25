@@ -1,22 +1,65 @@
 import { Voice } from './types';
 
 function createOrbSvgDataUri(c1: string, c2: string, c3: string, initials: string): string {
+  // Deterministic visual variant per character so every voice has a distinct illustrated vector icon
+  const code = (initials.charCodeAt(0) || 65) + (initials.charCodeAt(1) || 65);
+  const variant = code % 4;
+
+  // Center emblem: 0 = Studio Condenser Mic + Headset, 1 = Anime Star Character Silhouette, 2 = Cyber Acoustic Visor Character, 3 = Harmonic Diamond Wave Crest
+  const centerArtwork =
+    variant === 0
+      ? `<path d="M34 66 C34 48 86 48 86 66" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="4.5" stroke-linecap="round"/>
+         <rect x="28" y="60" width="9" height="18" rx="4.5" fill="#ffffff"/>
+         <rect x="83" y="60" width="9" height="18" rx="4.5" fill="#ffffff"/>
+         <rect x="50" y="42" width="20" height="32" rx="10" fill="rgba(255,255,255,0.95)"/>
+         <line x1="54" y1="52" x2="66" y2="52" stroke="${c2}" stroke-width="2.5" stroke-linecap="round"/>
+         <line x1="54" y1="58" x2="66" y2="58" stroke="${c2}" stroke-width="2.5" stroke-linecap="round"/>
+         <line x1="54" y1="64" x2="66" y2="64" stroke="${c2}" stroke-width="2.5" stroke-linecap="round"/>
+         <path d="M44 64 C44 76 76 76 76 64" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/>
+         <line x1="60" y1="74" x2="60" y2="85" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+         <line x1="49" y1="85" x2="71" y2="85" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>`
+      : variant === 1
+      ? `<circle cx="60" cy="48" r="15" fill="rgba(255,255,255,0.95)"/>
+         <path d="M42 46 Q48 27 60 31 Q72 27 78 46 Q71 39 60 41 Q49 39 42 46 Z" fill="${c1}"/>
+         <path d="M36 90 C38 71 82 71 84 90 Z" fill="rgba(255,255,255,0.92)"/>
+         <polygon points="86,32 88.5,37.5 94,40 88.5,42.5 86,48 83.5,42.5 78,40 83.5,37.5" fill="#ffffff"/>`
+      : variant === 2
+      ? `<circle cx="60" cy="49" r="15" fill="rgba(255,255,255,0.94)"/>
+         <rect x="46" y="44" width="28" height="8" rx="4" fill="${c3}"/>
+         <line x1="50" y1="48" x2="70" y2="48" stroke="${c1}" stroke-width="2.5" stroke-linecap="round"/>
+         <path d="M37 89 C40 70 80 70 83 89 Z" fill="rgba(255,255,255,0.9)"/>
+         <path d="M31 52 C31 33 89 33 89 52" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+         <circle cx="31" cy="54" r="5" fill="#ffffff"/>
+         <circle cx="89" cy="54" r="5" fill="#ffffff"/>`
+      : `<g fill="#ffffff" opacity="0.95">
+           <rect x="33" y="54" width="5" height="16" rx="2.5"/>
+           <rect x="42" y="44" width="5" height="36" rx="2.5"/>
+           <rect x="51" y="34" width="6" height="56" rx="3"/>
+           <rect x="63" y="38" width="6" height="48" rx="3"/>
+           <rect x="73" y="46" width="5" height="32" rx="2.5"/>
+           <rect x="82" y="54" width="5" height="16" rx="2.5"/>
+         </g>
+         <polygon points="60,22 63,29 70,32 63,35 60,42 57,35 50,32 57,29" fill="#ffffff"/>`;
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
     <defs>
-      <radialGradient id="g1" cx="30%" cy="25%" r="75%">
+      <radialGradient id="g1" cx="28%" cy="22%" r="78%">
         <stop offset="0%" stop-color="${c1}" />
-        <stop offset="55%" stop-color="${c2}" />
+        <stop offset="52%" stop-color="${c2}" />
         <stop offset="100%" stop-color="${c3}" />
       </radialGradient>
-      <radialGradient id="shine" cx="35%" cy="20%" r="45%">
-        <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
+      <radialGradient id="shine" cx="32%" cy="18%" r="48%">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.45)" />
         <stop offset="100%" stop-color="rgba(255,255,255,0)" />
       </radialGradient>
     </defs>
     <circle cx="60" cy="60" r="58" fill="url(#g1)" />
+    <circle cx="60" cy="60" r="49" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1.5" stroke-dasharray="6 4" />
     <circle cx="60" cy="60" r="58" fill="url(#shine)" />
-    <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2" />
-    <text x="60" y="68" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" font-size="28" letter-spacing="1">${initials}</text>
+    ${centerArtwork}
+    <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2.2" />
+    <rect x="74" y="84" width="32" height="20" rx="10" fill="rgba(8,10,18,0.78)" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" />
+    <text x="90" y="98" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="11" letter-spacing="0.5">${initials}</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

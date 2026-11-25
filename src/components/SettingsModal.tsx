@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings } from '@/lib/types';
 import { X, HardDrive, Key, Sliders, Check, Folder, Info, Moon, RotateCcw } from 'lucide-react';
+import { EngineBadgeIcon } from './CustomIcons';
 import { toast } from '@/lib/toast';
 import {
   computeTokenQuota,
@@ -191,16 +192,19 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
             {/* Compact 3-Column Quota Summary (Gemini, ElevenLabs, FreeTTS) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
               {[
-                { label: '✨ Gemini', q: tokenQuota.gemini, bar: 'bg-emerald-400' },
-                { label: '🎙️ ElevenLabs', q: tokenQuota.elevenlabs, bar: 'bg-violet-400' },
-                { label: '⚡ FreeTTS', q: tokenQuota.freetts, bar: 'bg-sky-400' },
+                { engine: 'gemini' as const, label: 'Gemini', q: tokenQuota.gemini, bar: 'bg-emerald-400' },
+                { engine: 'elevenlabs' as const, label: 'ElevenLabs', q: tokenQuota.elevenlabs, bar: 'bg-violet-400' },
+                { engine: 'freetts' as const, label: 'FreeTTS', q: tokenQuota.freetts, bar: 'bg-sky-400' },
               ].map((item) => (
                 <div
                   key={item.label}
                   className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 space-y-1"
                 >
                   <div className="flex items-center justify-between text-[11.5px]">
-                    <span className="font-semibold text-white">{item.label}</span>
+                    <span className="flex items-center gap-1.5 font-semibold text-white">
+                      <EngineBadgeIcon engine={item.engine} className="h-3.5 w-3.5 shrink-0" />
+                      <span>{item.label}</span>
+                    </span>
                     <span className="font-mono font-bold text-white">{item.q.percent}%</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-white/[0.08] overflow-hidden">

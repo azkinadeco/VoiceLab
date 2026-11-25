@@ -28,13 +28,13 @@ export const TEMPLATE_FIELDS: TemplateField[] = [
 ];
 
 export const TEMPLATE_CATEGORIES = [
-  { id: 'promo', label: '🛍️ Promo' },
-  { id: 'live', label: '🔴 Live' },
-  { id: 'review', label: '📦 Review' },
-  { id: 'hook', label: '⚡ Hook' },
-  { id: 'cod', label: '🚚 COD' },
-  { id: 'kuliner', label: '🍲 Kuliner' },
-  { id: 'daerah', label: '🇮🇩 Daerah' },
+  { id: 'promo', label: 'Promo' },
+  { id: 'live', label: 'Live' },
+  { id: 'review', label: 'Review' },
+  { id: 'hook', label: 'Hook' },
+  { id: 'cod', label: 'COD' },
+  { id: 'kuliner', label: 'Kuliner' },
+  { id: 'daerah', label: 'Daerah' },
 ];
 
 export const SCRIPT_TEMPLATES: ScriptTemplate[] = [

@@ -36,6 +36,7 @@ import {
 import { toast } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import AudioWaveVisualizer from './AudioWaveVisualizer';
+import { EngineBadgeIcon, AccentBadgeIcon } from './CustomIcons';
 import confetti from 'canvas-confetti';
 import {
   computeTokenQuota,
@@ -555,15 +556,15 @@ export default function TextToSpeech({
             </button>
           </div>
 
-          {/* Engine Switcher Row (5 clean options including ElevenLabs) */}
+          {/* Engine Switcher Row (5 clean options with custom vector SVG icons) */}
           <div className="grid grid-cols-5 items-center rounded-xl bg-white/[0.04] p-1 text-[11.5px]">
             {(
               [
                 { id: 'auto', label: 'Auto' },
-                { id: 'gemini-tts', label: '✨ Gemini' },
-                { id: 'elevenlabs-api', label: '🎙️ Eleven' },
-                { id: 'freetts-api', label: '⚡ FreeTTS' },
-                { id: 'voicevox', label: '🎌 VOICEVOX' },
+                { id: 'gemini-tts', label: 'Gemini' },
+                { id: 'elevenlabs-api', label: 'Eleven' },
+                { id: 'freetts-api', label: 'FreeTTS' },
+                { id: 'voicevox', label: 'VOICEVOX' },
               ] as const
             ).map((opt) => (
               <button
@@ -582,7 +583,7 @@ export default function TextToSpeech({
                     localStorage.setItem('voicelab_tts_engine', opt.id);
                   } catch {}
                 }}
-                className={`h-8 rounded-lg px-1.5 font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                className={`flex h-8 items-center justify-center gap-1 rounded-lg px-1.5 font-semibold whitespace-nowrap transition-all active:scale-95 ${
                   ttsEngine === opt.id
                     ? opt.id === 'voicevox'
                       ? 'bg-emerald-400 text-black shadow-sm'
@@ -590,16 +591,18 @@ export default function TextToSpeech({
                     : 'text-dark-300 hover:text-white'
                 }`}
               >
-                {opt.label}
+                <EngineBadgeIcon engine={opt.id} className="h-3.5 w-3.5 shrink-0" />
+                <span>{opt.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Ultra-Compact Single-Row Token Quota Indicator (Small, Neat, Zero Space Waste) */}
+          {/* Ultra-Compact Single-Row Token Quota Indicator (Small, Neat, Custom Vector Icons) */}
           <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-lg bg-white/[0.025] border border-white/[0.05] px-2.5 py-1 text-[11px] font-mono">
             {[
               {
-                name: '✨ Gemini',
+                engine: 'gemini' as const,
+                name: 'Gemini',
                 q: tokenQuota.gemini,
                 dot:
                   tokenQuota.gemini.percent >= 90
@@ -609,7 +612,8 @@ export default function TextToSpeech({
                       : 'bg-emerald-400',
               },
               {
-                name: '🎙️ ElevenLabs',
+                engine: 'elevenlabs' as const,
+                name: 'ElevenLabs',
                 q: tokenQuota.elevenlabs,
                 dot:
                   tokenQuota.elevenlabs.percent >= 90
@@ -619,7 +623,8 @@ export default function TextToSpeech({
                       : 'bg-violet-400',
               },
               {
-                name: '⚡ FreeTTS',
+                engine: 'freetts' as const,
+                name: 'FreeTTS',
                 q: tokenQuota.freetts,
                 dot:
                   tokenQuota.freetts.percent >= 90
@@ -635,6 +640,7 @@ export default function TextToSpeech({
                 className="flex items-center gap-1.5 text-dark-300"
               >
                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${item.dot}`} />
+                <EngineBadgeIcon engine={item.engine} className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-sans font-medium text-dark-200">{item.name}</span>
                 <span className="font-bold text-white">{item.q.percent}%</span>
                 <span className="text-[10px] text-dark-400">
@@ -688,16 +694,16 @@ export default function TextToSpeech({
           )}
         </div>
 
-        {/* 2. Quick Category & Character Bar (Clean single-row navigation) */}
+        {/* 2. Quick Category & Character Bar (Clean single-row navigation with custom vector badges) */}
         <div className="px-3 py-2 bg-white/[0.015] space-y-1.5">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {[
-              { id: 'Indonesian', flag: '🇮🇩', label: 'Indonesia' },
-              { id: 'Anime JP', flag: '🎌', label: 'Anime JP' },
-              { id: 'ElevenLabs', flag: '🎙️', label: 'ElevenLabs' },
-              { id: 'American', flag: '🇺🇸', label: 'English' },
-              { id: 'Indonesian (Jawa)', flag: '🇮🇩', label: 'Jawa' },
-              { id: 'Indonesian (Sunda)', flag: '🇮🇩', label: 'Sunda' },
+              { id: 'Indonesian', label: 'Indonesia' },
+              { id: 'Anime JP', label: 'Anime JP' },
+              { id: 'ElevenLabs', label: 'ElevenLabs' },
+              { id: 'American', label: 'English' },
+              { id: 'Indonesian (Jawa)', label: 'Jawa' },
+              { id: 'Indonesian (Sunda)', label: 'Sunda' },
             ].map((acc) => {
               const isActive = selectedVoice.accent === acc.id;
               return (
@@ -705,13 +711,13 @@ export default function TextToSpeech({
                   key={acc.id}
                   type="button"
                   onClick={() => handleSelectAccentCategory(acc.id)}
-                  className={`flex shrink-0 h-7 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-medium transition-all active:scale-95 ${
+                  className={`flex shrink-0 h-7 items-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-medium transition-all active:scale-95 ${
                     isActive
                       ? 'bg-white text-black font-semibold'
                       : 'bg-white/[0.05] text-dark-300 hover:text-white'
                   }`}
                 >
-                  <span>{acc.flag}</span>
+                  <AccentBadgeIcon id={acc.id} className="h-3.5 w-3.5 shrink-0" />
                   <span>{acc.label}</span>
                 </button>
               );
@@ -814,7 +820,10 @@ export default function TextToSpeech({
 
           {errorMsg && (
             <div className="mx-3 mb-2.5 flex items-center justify-between gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[12px] text-rose-200">
-              <span className="min-w-0">⚠️ {errorMsg}</span>
+              <span className="flex items-center gap-1.5 min-w-0">
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                <span className="truncate">{errorMsg}</span>
+              </span>
               <button
                 onClick={handleGenerate}
                 className="shrink-0 rounded-full bg-rose-500 px-2.5 py-1 text-[11px] font-semibold text-white"

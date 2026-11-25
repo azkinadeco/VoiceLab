@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
   Smartphone,
 } from 'lucide-react';
+import { VoiceLabLogoIcon } from './CustomIcons';
 
 export type ActiveTab =
   | 'tts'
@@ -116,9 +117,7 @@ export default function Sidebar({
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-black font-bold shadow-sm">
-                <AudioWaveform className="h-4 w-4" />
-              </div>
+              <VoiceLabLogoIcon className="h-8 w-8 shrink-0 shadow-sm" />
               {!isCollapsed && (
                 <span className="text-sm font-bold text-white tracking-tight">Voice Lab</span>
               )}
