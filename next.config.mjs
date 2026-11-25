@@ -2,7 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverComponentsExternalPackages: ['msedge-tts', '@huggingface/transformers', 'onnxruntime-node', 'sharp'],
+    serverComponentsExternalPackages: ['msedge-tts'],
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@huggingface/transformers/**',
+        'node_modules/onnxruntime-node/**',
+        'node_modules/onnxruntime-web/**',
+        'node_modules/sharp/**',
+        'data/**',
+      ],
+    },
   },
   async headers() {
     return [

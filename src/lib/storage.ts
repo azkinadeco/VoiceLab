@@ -12,16 +12,30 @@ import {
 } from './types';
 import { PRESET_VOICES } from './voices-data';
 
-export const IS_SERVERLESS = Boolean(
-  process.env.VERCEL ||
-    process.env.AWS_LAMBDA_FUNCTION_NAME ||
-    process.env.NETLIFY ||
-    process.cwd().startsWith('/var/task')
-);
+function resolveDataDir(): { dataDir: string; isServerless: boolean } {
+  const envServerless = Boolean(
+    process.env.VERCEL ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.NETLIFY ||
+      process.cwd().startsWith('/var/task')
+  );
+  if (envServerless) {
+    return { dataDir: path.join(os.tmpdir(), 'voicelab-data'), isServerless: true };
+  }
+  const localDir = path.join(process.cwd(), 'data');
+  try {
+    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+    fs.accessSync(localDir, fs.constants.W_OK);
+    return { dataDir: localDir, isServerless: false };
+  } catch {
+    // Fallback to /tmp if the filesystem is read-only
+    return { dataDir: path.join(os.tmpdir(), 'voicelab-data'), isServerless: true };
+  }
+}
 
-export const DATA_DIR = IS_SERVERLESS
-  ? path.join(os.tmpdir(), 'voicelab-data')
-  : path.join(process.cwd(), 'data');
+const resolved = resolveDataDir();
+export const IS_SERVERLESS = resolved.isServerless;
+export const DATA_DIR = resolved.dataDir;
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 export const AUDIO_DIR = path.join(DATA_DIR, 'audio');
 

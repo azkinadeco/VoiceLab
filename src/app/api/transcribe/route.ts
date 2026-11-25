@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { DATA_DIR } from '@/lib/storage';
+import { DATA_DIR, IS_SERVERLESS } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -9,14 +9,20 @@ export const maxDuration = 60;
 const MODELS_DIR = path.join(DATA_DIR, 'models');
 const MODEL_ID = process.env.WHISPER_MODEL || 'onnx-community/whisper-base';
 
-// Keep a single pipeline instance across requests (and across dev hot-reloads)
 const g = globalThis as any;
 
 async function getTranscriber() {
+  if (IS_SERVERLESS) {
+    throw new Error(
+      'Transkripsi Whisper offline hanya tersedia saat dijalankan di PC lokal. Di Vercel, silakan ketik/edit transkrip langsung atau gunakan tombol Rekam Mic (otomatis menangkap ucapan di Chrome/Edge).'
+    );
+  }
   if (!g.__voicelabWhisper) {
     g.__voicelabWhisper = (async () => {
       if (!fs.existsSync(MODELS_DIR)) fs.mkdirSync(MODELS_DIR, { recursive: true });
-      const { pipeline, env } = await import('@huggingface/transformers');
+      // Dynamic import hidden from static file tracer so Vercel never bundles 260MB onnxruntime-node
+      const dynamicImport = new Function('m', 'return import(m)') as (m: string) => Promise<any>;
+      const { pipeline, env } = await dynamicImport('@huggingface/transformers');
       env.cacheDir = MODELS_DIR;
       env.allowLocalModels = true;
       return pipeline('automatic-speech-recognition', MODEL_ID, { dtype: 'q8' as any });
@@ -44,20 +50,16 @@ function mapLanguage(lang: string): string | undefined {
   return undefined;
 }
 
-/** GET: report whether the local Whisper model is already downloaded */
 export async function GET() {
   const modelDir = path.join(MODELS_DIR, ...MODEL_ID.split('/'));
   return NextResponse.json({
     model: MODEL_ID,
-    downloaded: fs.existsSync(modelDir),
+    available: !IS_SERVERLESS,
+    downloaded: !IS_SERVERLESS && fs.existsSync(modelDir),
     loaded: Boolean(g.__voicelabWhisper),
   });
 }
 
-/**
- * POST { pcmBase64: base64 Float32 PCM @16kHz mono, language?: string }
- * Runs Whisper fully on this machine (model is cached in data/models after first download).
- */
 export async function POST(request: NextRequest) {
   try {
     const { pcmBase64, language } = await request.json();
