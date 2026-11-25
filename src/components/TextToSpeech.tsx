@@ -170,8 +170,9 @@ export default function TextToSpeech({
     }
   }, [loadedGeneration]);
 
-  // Floating popovers (hidden by default for zero visual clutter)
+  // Floating popovers & collapsible extras (hidden by default for clean mobile layout)
   const [showProsodyPopover, setShowProsodyPopover] = useState(false);
+  const [showExtras, setShowExtras] = useState<'none' | 'duration' | 'cta'>('none');
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [targetId, setTargetId] = useState<string>('tiktok15');
   const [quickVoiceIds, setQuickVoiceIds] = useState<string[]>([]);
@@ -366,116 +367,67 @@ export default function TextToSpeech({
   const isPreviewing = previewingVoiceId === selectedVoice.id;
 
   return (
-    <div className={`space-y-3 sm:space-y-4 mx-auto ${isIphoneMode ? 'max-w-full' : 'max-w-3xl'}`}>
+    <div className={`space-y-3 mx-auto ${isIphoneMode ? 'max-w-full' : 'max-w-2xl'}`}>
       {reuseNotice && (
-        <div className="flex items-center gap-2 rounded-full bg-brand-500/20 border border-brand-500/30 px-3.5 py-1.5 text-[13px] text-brand-300 w-fit mx-auto animate-fadeIn">
+        <div className="flex items-center gap-2 rounded-full bg-brand-500/20 border border-brand-500/30 px-3 py-1 text-[12px] text-brand-200 w-fit mx-auto animate-fadeIn">
           <Sparkles className="h-3.5 w-3.5 text-brand-400" />
           <span>{reuseNotice}</span>
         </div>
       )}
 
-      {/* ================= VOICE CARD ================= */}
-      <div className="studio-card rounded-3xl p-2">
+      {/* ================= COMPACT VOICE + ENGINE BAR ================= */}
+      <div className="studio-card rounded-2xl p-2 space-y-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onOpenVoiceSelector}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-1.5 text-left active:bg-white/[0.05] transition-colors"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-1 text-left active:bg-white/[0.05] transition-colors"
             aria-label="Ganti suara"
           >
             <img
               src={selectedVoice.avatarUrl}
               alt=""
-              className="h-11 w-11 shrink-0 rounded-full object-cover border border-white/10"
+              className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/15 shadow-sm"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate text-[15px] font-semibold text-white">{selectedVoice.name}</span>
+              <div className="flex items-center gap-1">
+                <span className="truncate text-[14px] font-bold text-white">{selectedVoice.name}</span>
                 <ChevronDown className="h-4 w-4 shrink-0 text-dark-400" />
               </div>
-              <div className="truncate text-[12px] text-dark-400">
+              <div className="truncate text-[11px] text-dark-400">
                 {selectedVoice.accent} · {selectedVoice.gender === 'male' ? 'Pria' : selectedVoice.gender === 'female' ? 'Wanita' : 'Netral'}
-                {selectedVoice.labels?.tone ? ` · ${selectedVoice.labels.tone}` : ''}
               </div>
             </div>
           </button>
+
           <button
             type="button"
             onClick={(e) => handlePlayNeuralPreview(selectedVoice, e)}
-            className={`mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
+            className={`mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all active:scale-90 ${
               isPreviewing
-                ? 'bg-brand-500 border-brand-400 text-white'
-                : 'bg-white/[0.06] border-white/[0.08] text-white'
+                ? 'bg-brand-500 border-brand-400 text-white shadow-lg shadow-brand-500/30'
+                : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'
             }`}
             aria-label={isPreviewing ? 'Hentikan sampel' : 'Dengarkan sampel suara'}
-            title="Dengarkan sampel suara ini"
+            title="Dengarkan sampel suara"
           >
-            {isPreviewing ? <Pause className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white translate-x-[1px]" />}
+            {isPreviewing ? (
+              <div className="flex items-end gap-[2px] h-3.5">
+                <span className="w-[3px] h-full rounded-full bg-white eq-bar" />
+                <span className="w-[3px] h-full rounded-full bg-white eq-bar eq-bar-2" />
+                <span className="w-[3px] h-full rounded-full bg-white eq-bar eq-bar-3" />
+              </div>
+            ) : (
+              <Play className="h-4 w-4 fill-white translate-x-[1px]" />
+            )}
           </button>
         </div>
 
-        {/* Favorites + recently used voices (Batch 9) */}
-        {quickVoices.length > 0 && (
-          <div className="mt-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x border-t border-white/[0.06] px-1.5 pt-2 pb-0.5">
-            {quickVoices.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => {
-                  haptic(6);
-                  onSelectVoice(v);
-                }}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/[0.07] py-1 pl-1 pr-3 active:scale-95 transition-transform"
-              >
-                <img src={v.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
-                <span className="text-[12px] font-medium text-dark-200">{v.name.split(' ')[0]}</span>
-                {favIds.includes(v.id) && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ================= COMPOSER CARD ================= */}
-      <div className="studio-card relative rounded-3xl overflow-hidden">
-        {/* Accent / language chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x border-b border-white/[0.06] px-3 py-2.5">
-          {accentChips.map((acc) => {
-            const isActive =
-              selectedVoice.accent === acc.id ||
-              (acc.id === 'European' && ['Spanish', 'French', 'German'].includes(selectedVoice.accent));
-            return (
-              <button
-                key={acc.id}
-                onClick={() => handleSelectAccentCategory(acc.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-all ${
-                  isActive
-                    ? 'bg-white text-black font-semibold shadow-sm'
-                    : 'bg-white/[0.05] text-dark-300 hover:bg-white/[0.09] hover:text-white'
-                }`}
-              >
-                <span>{acc.flag}</span>
-                <span>{acc.label.replace('English ', '').replace(' (Nasional)', '').replace(/ \(.+\)$/, '')}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
-          <button
-            type="button"
-            onClick={() => setIsTemplateOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-full bg-brand-500/15 border border-brand-500/30 px-3.5 text-[13px] font-semibold text-brand-200 active:scale-95 transition-transform"
-          >
-            <LayoutTemplate className="h-4 w-4" />
-            Template Jualan
-          </button>
-
-          {/* Quick API Engine Switcher: Auto / Gemini / FreeTTS */}
+        {/* Clean single-row API Engine Switcher + Quick Voices */}
+        <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 px-1">
           <div
-            className="inline-flex h-9 items-center rounded-full bg-white/[0.05] border border-white/[0.08] p-0.5 text-[12px]"
-            title="Pilih mesin API TTS (otomatis fallback jika salah satu limit)"
+            className="grid grid-cols-3 w-full sm:w-auto sm:inline-grid items-center rounded-xl bg-white/[0.04] border border-white/[0.07] p-0.5 text-[11.5px]"
+            title="Pilih mesin API TTS (otomatis fallback jika limit)"
           >
             {(
               [
@@ -494,7 +446,7 @@ export default function TextToSpeech({
                     localStorage.setItem('voicelab_tts_engine', opt.id);
                   } catch {}
                 }}
-                className={`h-8 rounded-full px-2.5 font-semibold transition-all ${
+                className={`h-7 rounded-lg px-2.5 font-semibold transition-all active:scale-95 ${
                   ttsEngine === opt.id
                     ? 'bg-white text-black shadow-sm'
                     : 'text-dark-300 hover:text-white'
@@ -505,16 +457,119 @@ export default function TextToSpeech({
             ))}
           </div>
 
+          {quickVoices.length > 0 && (
+            <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x flex-1 justify-end">
+              {quickVoices.slice(0, 4).map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    onSelectVoice(v);
+                  }}
+                  className="flex shrink-0 items-center gap-1 rounded-full bg-white/[0.05] border border-white/[0.07] py-0.5 pl-0.5 pr-2.5 active:scale-95 transition-transform"
+                >
+                  <img src={v.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                  <span className="text-[11px] font-medium text-dark-200">{v.name.split(' ')[0]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= MINIMAL COMPOSER CARD ================= */}
+      <div className="studio-card relative rounded-2xl overflow-hidden">
+        {/* Accent chips (compact single-row scroll) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x border-b border-white/[0.06] px-3 py-2">
+          {accentChips.map((acc) => {
+            const isActive =
+              selectedVoice.accent === acc.id ||
+              (acc.id === 'European' && ['Spanish', 'French', 'German'].includes(selectedVoice.accent));
+            return (
+              <button
+                key={acc.id}
+                onClick={() => handleSelectAccentCategory(acc.id)}
+                className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium transition-all active:scale-95 ${
+                  isActive
+                    ? 'bg-white text-black font-semibold shadow-sm'
+                    : 'bg-white/[0.05] text-dark-300 hover:bg-white/[0.09] hover:text-white'
+                }`}
+              >
+                <span>{acc.flag}</span>
+                <span>{acc.label.replace('English ', '').replace(' (Nasional)', '').replace(/ \(.+\)$/, '')}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Clean Text Canvas */}
+        <textarea
+          rows={4}
+          placeholder="Tulis naskah di sini…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="block w-full min-h-[116px] sm:min-h-[140px] bg-transparent px-3.5 pt-3 pb-2 text-[15px] sm:text-[15px] text-white placeholder-dark-500 focus:outline-none resize-none leading-relaxed"
+        />
+
+        {/* Compact interactive tool strip (replaces bulky always-open boxes) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pb-2.5">
+          <button
+            type="button"
+            onClick={() => setIsTemplateOpen(true)}
+            className="flex shrink-0 h-8 items-center gap-1 rounded-full bg-brand-500/15 border border-brand-500/30 px-2.5 text-[12px] font-semibold text-brand-200 active:scale-95 transition-transform"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5" />
+            Template
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              haptic(5);
+              setShowExtras(showExtras === 'duration' ? 'none' : 'duration');
+            }}
+            className={`flex shrink-0 h-8 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition-all active:scale-95 ${
+              showExtras === 'duration'
+                ? 'bg-white text-black border-white font-semibold'
+                : overTarget
+                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                  : 'bg-white/[0.05] border-white/[0.07] text-dark-200'
+            }`}
+          >
+            <span>~{estSec}d</span>
+            {target.sec > 0 && <span className="opacity-60">/{target.sec}d</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              haptic(5);
+              setShowExtras(showExtras === 'cta' ? 'none' : 'cta');
+            }}
+            className={`flex shrink-0 h-8 items-center rounded-full border px-2.5 text-[12px] font-medium transition-all active:scale-95 ${
+              showExtras === 'cta'
+                ? 'bg-white text-black border-white font-semibold'
+                : 'bg-white/[0.05] border-white/[0.07] text-dark-200'
+            }`}
+          >
+            + CTA
+          </button>
+
           <div className="flex-1" />
+
+          <span className="shrink-0 text-[11px] font-mono text-dark-500 hidden sm:inline">{text.length} kar</span>
+
           <button
             type="button"
             onClick={onOpenPronunciation}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-dark-300 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-dark-400 hover:bg-white/[0.08] hover:text-white transition-colors"
             title="Kamus Pelafalan"
             aria-label="Kamus Pelafalan"
           >
-            <BookOpen className="h-[18px] w-[18px]" />
+            <BookOpen className="h-4 w-4" />
           </button>
+
           <button
             type="button"
             disabled={text.length === 0}
@@ -522,92 +577,69 @@ export default function TextToSpeech({
               setText('');
               toast('Naskah dibersihkan', 'info');
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-dark-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors disabled:opacity-30"
-            title="Bersihkan Teks"
-            aria-label="Bersihkan Teks"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-dark-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors disabled:opacity-25"
+            title="Hapus Teks"
+            aria-label="Hapus Teks"
           >
-            <Trash2 className="h-[17px] w-[17px]" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Text canvas */}
-        <textarea
-          rows={5}
-          placeholder="Tulis naskah video TikTok, voiceover iklan produk, atau narasi konten di sini…"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="block w-full min-h-[150px] bg-transparent px-4 pt-2 pb-2 text-[16px] text-white placeholder-dark-500 focus:outline-none resize-none leading-relaxed"
-        />
-
-        {/* Stats row */}
-        <div className="flex items-center gap-3 px-4 pb-2 text-[12px] text-dark-400 select-none">
-          <span className="flex items-center gap-1 text-emerald-400/80">
-            <Check className="h-3.5 w-3.5" />
-            Tersimpan
-          </span>
-          <span>{text.length} karakter</span>
-          <span className="ml-auto font-medium text-dark-200">~{estSec} detik</span>
-        </div>
-
-        {/* Platform duration target (Batch 8) */}
-        <div className="mx-3 mb-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-2.5 space-y-2">
-          <div className="flex gap-1 overflow-x-auto no-scrollbar">
-            {PLATFORM_TARGETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => selectTarget(p.id)}
-                className={`shrink-0 flex-1 rounded-full px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap transition-all ${
-                  targetId === p.id ? 'bg-white/15 text-white' : 'text-dark-400'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {target.sec > 0 && (
-            <div>
+        {/* Collapsible: Target Durasi */}
+        {showExtras === 'duration' && (
+          <div className="mx-3 mb-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 space-y-2 animate-fadeIn">
+            <div className="flex gap-1 overflow-x-auto no-scrollbar">
+              {PLATFORM_TARGETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => selectTarget(p.id)}
+                  className={`shrink-0 flex-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap transition-all ${
+                    targetId === p.id ? 'bg-white text-black' : 'bg-white/[0.04] text-dark-400'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {target.sec > 0 && (
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
                 <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${targetPct}%` }} />
               </div>
-              <div className={`mt-1 text-[12px] ${overTarget ? 'text-rose-300' : 'text-dark-400'}`}>
-                {overTarget
-                  ? `Kelebihan ~${estSec - target.sec} detik — pangkas naskah atau naikkan kecepatan`
-                  : `${estSec} dari ${target.sec} detik · sisa ~${target.sec - estSec} detik`}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
-        {/* One-tap CTA */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x px-3 pb-3">
-          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-dark-500">CTA</span>
-          {CTA_SNIPPETS.map((c) => (
-            <button
-              key={c.label}
-              type="button"
-              onClick={() => appendCta(c.text)}
-              className="shrink-0 rounded-full border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 text-[12px] font-medium text-dark-200 active:scale-95 transition-transform"
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
+        {/* Collapsible: One-tap CTA */}
+        {showExtras === 'cta' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x px-3 pb-2.5 animate-fadeIn">
+            {CTA_SNIPPETS.map((c) => (
+              <button
+                key={c.label}
+                type="button"
+                onClick={() => appendCta(c.text)}
+                className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1 text-[12px] font-medium text-dark-200 active:scale-95 transition-transform"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Auto accent match */}
         {isIndoTextWithForeignVoice && (
-          <div className="mx-3 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-[13px] text-amber-200">
-            <span className="flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-              Teks Indonesia terdeteksi
+          <div className="mx-3 mb-2.5 flex items-center justify-between gap-2 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2 text-[12px] text-amber-200">
+            <span className="flex items-center gap-1.5 truncate">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              Ganti ke suara ID?
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => {
                   const ardi = voices.find((v) => v.id === 'voice-ardi');
                   if (ardi) onSelectVoice(ardi);
                 }}
-                className="rounded-full bg-amber-400 px-3 py-1 text-[12px] font-bold text-black"
+                className="rounded-full bg-amber-400 px-2.5 py-0.5 text-[11px] font-bold text-black"
               >
                 🇮🇩 Ardi
               </button>
@@ -616,7 +648,7 @@ export default function TextToSpeech({
                   const gadis = voices.find((v) => v.id === 'voice-gadis');
                   if (gadis) onSelectVoice(gadis);
                 }}
-                className="rounded-full bg-white/10 px-3 py-1 text-[12px] font-medium text-white"
+                className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white"
               >
                 🇮🇩 Gadis
               </button>
@@ -625,44 +657,44 @@ export default function TextToSpeech({
         )}
 
         {errorMsg && (
-          <div className="mx-3 mb-3 flex items-center justify-between gap-2 rounded-2xl bg-rose-500/10 border border-rose-500/30 px-3.5 py-2.5 text-[13px] text-rose-200">
+          <div className="mx-3 mb-2.5 flex items-center justify-between gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-3 py-2 text-[12px] text-rose-200">
             <span className="min-w-0">⚠️ {errorMsg}</span>
             <button
               onClick={handleGenerate}
-              className="shrink-0 rounded-full bg-rose-500 px-3 py-1 text-[12px] font-semibold text-white"
+              className="shrink-0 rounded-full bg-rose-500 px-2.5 py-1 text-[11px] font-semibold text-white"
             >
               Ulangi
             </button>
           </div>
         )}
 
-        {/* Action bar */}
-        <div className="flex items-center gap-2 border-t border-white/[0.06] p-3">
+        {/* Action bar — always above the fold on mobile */}
+        <div className="flex items-center gap-2 border-t border-white/[0.06] p-2.5">
           <button
             type="button"
             onClick={() => setShowProsodyPopover(true)}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] border border-white/[0.08] text-dark-200 active:scale-95 transition-transform"
-            title="Pengaturan Kecepatan & Nada"
-            aria-label="Pengaturan kecepatan dan nada"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] border border-white/[0.08] text-dark-200 hover:text-white active:scale-95 transition-all"
+            title="Kecepatan & Nada"
+            aria-label="Kecepatan dan nada"
           >
-            <SlidersHorizontal className="h-5 w-5" />
+            <SlidersHorizontal className="h-4.5 w-4.5" />
           </button>
           {isGenerating ? (
             <button
               type="button"
               onClick={handleAbortGeneration}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-[15px] font-bold text-rose-200 active:scale-[0.99]"
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-[14px] font-bold text-rose-200 active:scale-[0.98] transition-transform"
             >
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               <span>Membuat suara… Batal</span>
             </button>
           ) : (
             <button
               onClick={handleGenerate}
               disabled={text.trim().length === 0}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white text-[15px] font-bold text-zinc-950 shadow-lg transition-all disabled:opacity-30 active:scale-[0.99]"
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-white via-zinc-100 to-indigo-100 text-[14px] font-bold text-zinc-950 shadow-lg shadow-white/10 hover:brightness-105 transition-all disabled:opacity-30 active:scale-[0.98]"
             >
-              <Sparkles className="h-5 w-5 fill-zinc-950" />
+              <Sparkles className="h-4 w-4 fill-zinc-950" />
               <span>Generate Voiceover</span>
             </button>
           )}

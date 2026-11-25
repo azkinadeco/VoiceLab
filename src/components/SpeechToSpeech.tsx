@@ -413,7 +413,7 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
               </div>
             )}
             {!sourceAudioUrl && !isRecording && (
-              <p className="text-[12px] text-dark-400">Rekam suara Anda atau upload file MP3, WAV, M4A, MP4, MOV.</p>
+              <p className="text-[11.5px] text-dark-500">MP3, WAV, M4A, MP4</p>
             )}
           </div>
 
@@ -478,10 +478,10 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
                     key={p.id}
                     onClick={() => applyPreset(p.id)}
                     title={p.desc}
-                    className={`flex flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 transition-all active:scale-95 ${
+                    className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2.5 transition-all active:scale-95 ${
                       presetId === p.id
-                        ? 'bg-brand-500/25 border-brand-400 text-white'
-                        : 'bg-dark-950/60 border-white/10 text-dark-200 hover:border-white/25'
+                        ? 'bg-brand-500/25 border-brand-400 text-white shadow-md shadow-brand-500/20 scale-[1.02]'
+                        : 'bg-white/[0.03] border-white/[0.08] text-dark-200 hover:bg-white/[0.06] hover:border-white/20'
                     }`}
                   >
                     <span className="text-xl leading-none">{p.emoji}</span>

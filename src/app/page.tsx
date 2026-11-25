@@ -145,7 +145,7 @@ export default function Home() {
 
     // Detect horizontal swipe with minimum threshold and angle check
     if (Math.abs(deltaX) > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
-      const hubs: ActiveTab[] = ['tts', 'voicelab', 'studio', 'history'];
+      const hubs: ActiveTab[] = ['tts', 'speech2speech', 'voicelab', 'history'];
       const currentIndex = hubs.indexOf(activeTab);
       if (currentIndex !== -1) {
         if (deltaX < 0 && currentIndex < hubs.length - 1) {
@@ -621,7 +621,7 @@ export default function Home() {
               onToggleOledTheme={toggleOledTheme}
             />
 
-            <main className="flex-1 px-4 pt-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+            <main className="flex-1 px-3 pt-3 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
               {renderActiveView(false)}
             </main>
           </div>

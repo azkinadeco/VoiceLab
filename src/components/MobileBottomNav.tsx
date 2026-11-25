@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Mic, Dna, Film, History, LayoutGrid } from 'lucide-react';
+import { Mic, Dna, Wand2, History, LayoutGrid } from 'lucide-react';
 import { ActiveTab } from './Sidebar';
 import { haptic } from '@/lib/haptics';
 
 export type MobilePlatform = 'ios' | 'android';
 
 /** Screens that live under the "Lainnya" (More) tab. */
-export const MORE_TAB_IDS: ActiveTab[] = ['speech2speech', 'isolator', 'sfx', 'agents'];
+export const MORE_TAB_IDS: ActiveTab[] = ['studio', 'projects', 'sfx', 'agents'];
 
 interface MobileBottomNavProps {
   activeTab: ActiveTab;
@@ -36,9 +36,9 @@ export default function MobileBottomNav({
     icon: typeof Mic;
     badge?: number | null;
   }[] = [
-    { id: 'tts', matchIds: ['tts', 'batch'], label: 'Voiceover', icon: Mic },
+    { id: 'tts', matchIds: ['tts', 'batch'], label: 'Suara', icon: Mic },
+    { id: 'speech2speech', matchIds: ['speech2speech', 'isolator'], label: 'Ubah', icon: Wand2 },
     { id: 'voicelab', matchIds: ['voicelab'], label: 'Kloning', icon: Dna },
-    { id: 'studio', matchIds: ['studio', 'projects'], label: 'Studio', icon: Film },
     {
       id: 'history',
       matchIds: ['history', 'analytics'],

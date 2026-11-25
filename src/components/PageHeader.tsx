@@ -28,22 +28,22 @@ export default function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           {icon && (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] border border-white/[0.08] text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] border border-white/[0.08] text-white">
               {icon}
             </div>
           )}
-          <h1 className="min-w-0 text-[22px] sm:text-lg font-bold tracking-tight text-white leading-tight">
+          <h1 className="min-w-0 text-[19px] sm:text-lg font-bold tracking-tight text-white leading-tight">
             <span className="sm:hidden">{mobileTitle || title}</span>
             <span className="hidden sm:inline">{title}</span>
           </h1>
           {titleAddon && <div className="shrink-0">{titleAddon}</div>}
         </div>
         {subtitle && (
-          <p className="mt-1 text-[13px] sm:text-xs text-dark-400 leading-snug">{subtitle}</p>
+          <p className="hidden sm:block mt-1 text-xs text-dark-400 leading-snug">{subtitle}</p>
         )}
       </div>
       {actions && (

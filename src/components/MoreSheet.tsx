@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  AudioWaveform,
+  Film,
   Scissors,
   Zap,
   Bot,
@@ -35,7 +35,7 @@ interface MoreSheetProps {
 }
 
 const TOOLS: { id: ActiveTab; label: string; desc: string; icon: typeof Zap; tint: string }[] = [
-  { id: 'speech2speech', label: 'Ubah Suara', desc: 'Rekam → suara lain', icon: AudioWaveform, tint: 'from-indigo-500/30 to-indigo-500/5 text-indigo-300' },
+  { id: 'studio', label: 'Studio Dubbing', desc: 'Dialog & subtitle SRT', icon: Film, tint: 'from-indigo-500/30 to-indigo-500/5 text-indigo-300' },
   { id: 'isolator', label: 'Isolasi Vokal', desc: 'Hapus noise video', icon: Scissors, tint: 'from-emerald-500/30 to-emerald-500/5 text-emerald-300' },
   { id: 'sfx', label: 'Efek Suara', desc: 'SFX untuk konten', icon: Zap, tint: 'from-amber-500/30 to-amber-500/5 text-amber-300' },
   { id: 'agents', label: 'Agen Suara AI', desc: 'CS & live chat', icon: Bot, tint: 'from-sky-500/30 to-sky-500/5 text-sky-300' },
