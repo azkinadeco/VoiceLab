@@ -268,6 +268,12 @@ export default function TextToSpeech({
     abortControllerRef.current = controller;
 
     try {
+      let clientKeys: Record<string, string> | undefined;
+      try {
+        const raw = localStorage.getItem('voicelab_client_keys');
+        if (raw) clientKeys = JSON.parse(raw);
+      } catch {}
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -277,6 +283,7 @@ export default function TextToSpeech({
           settings,
           type: 'tts',
           provider: ttsEngine === 'auto' ? undefined : ttsEngine,
+          clientKeys,
         }),
         signal: controller.signal,
       });

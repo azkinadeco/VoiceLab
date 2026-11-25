@@ -17,6 +17,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
   const [freeTtsApiKey, setFreeTtsApiKey] = useState('');
   const [elevenApiKey, setElevenApiKey] = useState('');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
+  const [envConfigured, setEnvConfigured] = useState<{ gemini?: boolean; freetts?: boolean }>({});
   const [audioFormat, setAudioFormat] = useState<'mp3' | 'wav'>('mp3');
   const [isOled, setIsOled] = useState(false);
   const [stats, setStats] = useState<any>(null);
@@ -54,13 +55,20 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
       fetch('/api/settings')
         .then((res) => res.json())
         .then((data) => {
+          let localKeys: any = {};
+          try {
+            localKeys = JSON.parse(localStorage.getItem('voicelab_client_keys') || '{}');
+          } catch {}
           if (data.settings) {
-            setProvider(data.settings.ttsProvider || 'edge-neural');
-            setGeminiApiKey(data.settings.geminiApiKey || '');
-            setFreeTtsApiKey(data.settings.freeTtsApiKey || '');
-            setElevenApiKey(data.settings.elevenLabsApiKey || '');
-            setOpenAiApiKey(data.settings.openAiApiKey || '');
+            setProvider(data.settings.ttsProvider || localKeys.ttsProvider || 'edge-neural');
+            setGeminiApiKey(data.settings.geminiApiKey || localKeys.geminiApiKey || '');
+            setFreeTtsApiKey(data.settings.freeTtsApiKey || localKeys.freeTtsApiKey || '');
+            setElevenApiKey(data.settings.elevenLabsApiKey || localKeys.elevenLabsApiKey || '');
+            setOpenAiApiKey(data.settings.openAiApiKey || localKeys.openAiApiKey || '');
             setAudioFormat(data.settings.audioFormat || 'mp3');
+          }
+          if (data.envConfigured) {
+            setEnvConfigured(data.envConfigured);
           }
           if (data.stats) {
             setStats(data.stats);
@@ -75,6 +83,20 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Persist keys in browser localStorage so they survive Vercel serverless cold starts
+      try {
+        localStorage.setItem(
+          'voicelab_client_keys',
+          JSON.stringify({
+            ttsProvider: provider,
+            geminiApiKey: geminiApiKey.trim(),
+            freeTtsApiKey: freeTtsApiKey.trim(),
+            elevenLabsApiKey: elevenApiKey.trim(),
+            openAiApiKey: openAiApiKey.trim(),
+          })
+        );
+      } catch {}
+
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,11 +268,17 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                   className="mt-0.5 accent-brand-500"
                 />
                 <div className="w-full">
-                  <h4 className="text-xs font-semibold text-white flex items-center gap-2">
+                  <h4 className="text-xs font-semibold text-white flex flex-wrap items-center gap-2">
                     ✨ Gemini 2.5 Flash TTS (Google AI Studio)
-                    <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 text-[10px]">
-                      Paling Natural • Tanpa Watermark
-                    </span>
+                    {envConfigured.gemini ? (
+                      <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 text-[10px]">
+                        ✓ Aktif dari Server Env
+                      </span>
+                    ) : (
+                      <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 text-[10px]">
+                        Paling Natural • Tanpa Watermark
+                      </span>
+                    )}
                   </h4>
                   <p className="text-[11px] text-dark-400 mt-0.5">
                     Suara AI paling ekspresif & natural resmi dari Google. Gratis (Free Tier) di{' '}
@@ -292,11 +320,17 @@ export default function SettingsModal({ isOpen, onClose, onSettingsSaved }: Sett
                   className="mt-0.5 accent-brand-500"
                 />
                 <div className="w-full">
-                  <h4 className="text-xs font-semibold text-white flex items-center gap-2">
+                  <h4 className="text-xs font-semibold text-white flex flex-wrap items-center gap-2">
                     FreeTTS Neural API (Terbaik untuk Vercel • Gratis)
-                    <span className="rounded bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 text-[10px]">
-                      2.250+ Suara
-                    </span>
+                    {envConfigured.freetts ? (
+                      <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 text-[10px]">
+                        ✓ Aktif dari Server Env
+                      </span>
+                    ) : (
+                      <span className="rounded bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 text-[10px]">
+                        2.250+ Suara
+                      </span>
+                    )}
                   </h4>
                   <p className="text-[11px] text-dark-400 mt-0.5">
                     Suara neural jernih (Ardi, Gadis, Jawa, Sunda, dll.) via REST API freetts.org. Ambil API key gratis di{' '}
