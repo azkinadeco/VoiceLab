@@ -113,7 +113,7 @@ export default function Header({
   const phone = insideFrame;
 
   const segmented = (
-    <div className="flex w-full items-center gap-1 rounded-full bg-white/[0.05] p-1 border border-white/[0.06]">
+    <div className="flex w-full items-center gap-1 rounded-xl bg-white/[0.05] p-1">
       {subPills.map((pill) => {
         const isActive = activeTab === pill.id;
         return (
@@ -123,7 +123,7 @@ export default function Header({
               haptic(8);
               onTabChange(pill.id);
             }}
-            className={`flex-1 rounded-full px-3 py-1.5 text-[13px] font-medium transition-all ${
+            className={`flex-1 h-9 rounded-lg px-3 text-[13px] font-medium transition-all ${
               isActive ? 'bg-white text-black font-semibold shadow-sm' : 'text-dark-300 active:text-white'
             }`}
           >
@@ -135,7 +135,7 @@ export default function Header({
   );
 
   const iconBtn =
-    'flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] border border-white/[0.08] text-dark-200 active:scale-95 transition-all';
+    'flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-dark-200 active:scale-95 transition-all';
 
   /* ---------------- PHONE LAYOUT (real phone < lg, or inside simulator) ---------------- */
   const phoneHeader = (

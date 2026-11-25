@@ -324,8 +324,8 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
         }
       />
 
-      {/* Mode switch */}
-      <div className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid rounded-xl bg-dark-900 p-1 border border-white/10">
+      {/* Mode switch — lightweight pill without heavy outer border */}
+      <div className="grid grid-cols-2 w-full sm:w-auto sm:inline-grid rounded-xl bg-white/[0.05] p-1">
         {(
           [
             { id: 'effect', label: 'Efek Suara', icon: Wand2 },
@@ -339,21 +339,21 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
               setMode(m.id);
               setResultGen(null);
             }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg px-4 h-10 text-[13px] font-semibold transition-colors ${
+            className={`flex items-center justify-center gap-1.5 rounded-lg px-3 h-9 text-[13px] font-semibold transition-colors ${
               mode === m.id ? 'bg-white text-black' : 'text-dark-300 hover:text-white'
             }`}
           >
-            <m.icon className="h-4 w-4" />
+            <m.icon className="h-3.5 w-3.5" />
             {m.label}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
         {/* Step 1: Source */}
-        <div className="studio-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div className="studio-card rounded-2xl p-3.5 sm:p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white uppercase tracking-wider">1. Suara Asli</span>
+            <span className="text-[11px] font-bold text-dark-300 uppercase tracking-wider">1. Suara Asli</span>
             {sourceAudioUrl && !isRecording && (
               <button
                 onClick={() => {
@@ -369,27 +369,27 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
             )}
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/15 bg-dark-950/50 p-3 sm:p-4 text-center min-h-[120px]">
-            <div className="grid grid-cols-2 w-full gap-2.5">
+          <div className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-white/[0.03] p-3 text-center">
+            <div className="grid grid-cols-2 w-full gap-2">
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
-                className={`flex items-center justify-center gap-2 h-12 rounded-xl px-3 text-[13px] font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center justify-center gap-1.5 h-11 rounded-xl px-3 text-[13px] font-bold whitespace-nowrap transition-all active:scale-95 ${
                   isRecording
                     ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30'
                     : 'bg-brand-600 text-white hover:bg-brand-500'
                 }`}
               >
-                {isRecording ? <Square className="h-3.5 w-3.5 fill-white" /> : <Mic className="h-4 w-4" />}
-                {isRecording ? `Stop (${recordSec}s)` : sourceAudioUrl ? 'Rekam Ulang' : 'Rekam Mic'}
+                {isRecording ? <Square className="h-3.5 w-3.5 fill-white" /> : <Mic className="h-4 w-4 shrink-0" />}
+                {isRecording ? `Stop (${recordSec}s)` : sourceAudioUrl ? 'Rekam Lagi' : 'Rekam'}
               </button>
               <label
-                className={`flex items-center justify-center gap-2 h-12 rounded-xl bg-dark-850 text-dark-200 hover:text-white hover:bg-dark-800 border border-white/10 px-3 text-[13px] font-semibold whitespace-nowrap cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 h-11 rounded-xl bg-white/[0.07] text-white hover:bg-white/[0.12] px-3 text-[13px] font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
                   isRecording ? 'pointer-events-none opacity-40' : ''
                 }`}
               >
-                <Upload className="h-4 w-4 text-brand-400" />
-                Upload Audio/Video
+                <Upload className="h-4 w-4 shrink-0 text-brand-300" />
+                Upload
                 <input type="file" accept="audio/*,video/*" onChange={handleFileUpload} className="hidden" />
               </label>
             </div>
@@ -457,35 +457,36 @@ export default function SpeechToSpeech({ voices, onGenerationCreated }: SpeechTo
         </div>
 
         {/* Step 2 */}
-        <div className="studio-card rounded-2xl p-4 sm:p-5 space-y-4 flex flex-col justify-between">
+        <div className="studio-card rounded-2xl p-3.5 sm:p-5 space-y-3.5 flex flex-col justify-between">
           {mode === 'effect' ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">2. Pilih Efek</span>
+                <span className="text-[11px] font-bold text-dark-300 uppercase tracking-wider">2. Pilih Efek</span>
                 <button
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className={`flex items-center gap-1 rounded-lg px-2.5 h-8 text-[12px] font-semibold border ${
-                    showAdvanced ? 'bg-brand-500/20 border-brand-500/40 text-brand-200' : 'border-white/10 text-dark-300'
+                  className={`flex items-center gap-1 rounded-lg px-2.5 h-9 text-[12px] font-semibold transition-colors ${
+                    showAdvanced ? 'bg-brand-500/25 text-brand-200' : 'bg-white/[0.05] text-dark-300'
                   }`}
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  Atur Manual
+                  Manual
                 </button>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {/* Horizontal swipe on mobile so CTA stays above the fold; 4-col grid on desktop */}
+              <div className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto no-scrollbar pb-0.5">
                 {VOICE_PRESETS.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => applyPreset(p.id)}
                     title={p.desc}
-                    className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2.5 transition-all active:scale-95 ${
+                    className={`flex shrink-0 w-[82px] sm:w-auto flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 transition-all active:scale-95 ${
                       presetId === p.id
-                        ? 'bg-brand-500/25 border-brand-400 text-white shadow-md shadow-brand-500/20 scale-[1.02]'
-                        : 'bg-white/[0.03] border-white/[0.08] text-dark-200 hover:bg-white/[0.06] hover:border-white/20'
+                        ? 'bg-brand-500/25 ring-1 ring-brand-400 text-white'
+                        : 'bg-white/[0.04] text-dark-200 hover:bg-white/[0.08]'
                     }`}
                   >
                     <span className="text-xl leading-none">{p.emoji}</span>
-                    <span className="text-[11px] font-semibold leading-tight text-center">{p.label}</span>
+                    <span className="text-[11px] font-semibold leading-tight text-center whitespace-nowrap">{p.label}</span>
                   </button>
                 ))}
               </div>

@@ -113,7 +113,7 @@ export default function TextToSpeech({
   onOpenTrimmer,
 }: TextToSpeechProps) {
   const [text, setText] = useState(
-    'Halo! Selamat datang di Voice Lab. Pilih aksen suara dan klik Generate untuk mendengar suara manusia neural.'
+    'Halo! Selamat datang di Voice Lab, pilih suara dan klik Generate.'
   );
   const [activeAccentFilter, setActiveAccentFilter] = useState<string>('Indonesian');
   const [ttsEngine, setTtsEngine] = useState<'auto' | 'gemini-tts' | 'freetts-api'>('auto');
@@ -424,9 +424,9 @@ export default function TextToSpeech({
         </div>
 
         {/* Clean single-row API Engine Switcher + Quick Voices */}
-        <div className="flex items-center gap-2 border-t border-white/[0.06] pt-2 px-1">
+        <div className="flex items-center gap-2 pt-1.5 px-1">
           <div
-            className="grid grid-cols-3 w-full sm:w-auto sm:inline-grid items-center rounded-xl bg-white/[0.04] border border-white/[0.07] p-0.5 text-[11.5px]"
+            className="grid grid-cols-3 w-full sm:w-auto sm:inline-grid items-center rounded-xl bg-white/[0.05] p-1 text-[12px]"
             title="Pilih mesin API TTS (otomatis fallback jika limit)"
           >
             {(
@@ -446,7 +446,7 @@ export default function TextToSpeech({
                     localStorage.setItem('voicelab_tts_engine', opt.id);
                   } catch {}
                 }}
-                className={`h-7 rounded-lg px-2.5 font-semibold transition-all active:scale-95 ${
+                className={`h-9 rounded-lg px-2.5 font-semibold transition-all active:scale-95 ${
                   ttsEngine === opt.id
                     ? 'bg-white text-black shadow-sm'
                     : 'text-dark-300 hover:text-white'
@@ -481,7 +481,7 @@ export default function TextToSpeech({
       {/* ================= MINIMAL COMPOSER CARD ================= */}
       <div className="studio-card relative rounded-2xl overflow-hidden">
         {/* Accent chips (compact single-row scroll) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar fade-x border-b border-white/[0.06] px-3 py-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pt-2.5 pb-1">
           {accentChips.map((acc) => {
             const isActive =
               selectedVoice.accent === acc.id ||
@@ -490,7 +490,7 @@ export default function TextToSpeech({
               <button
                 key={acc.id}
                 onClick={() => handleSelectAccentCategory(acc.id)}
-                className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium transition-all active:scale-95 ${
+                className={`flex shrink-0 h-8 items-center gap-1 rounded-full px-3 text-[12px] font-medium transition-all active:scale-95 ${
                   isActive
                     ? 'bg-white text-black font-semibold shadow-sm'
                     : 'bg-white/[0.05] text-dark-300 hover:bg-white/[0.09] hover:text-white'

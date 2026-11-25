@@ -68,20 +68,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.15);
 }
 
-/* Clean Modern Glass Card with subtle top rim light */
+/* Clean Modern Surface Card — surface elevation instead of noisy borders */
 .studio-card {
-  background: linear-gradient(180deg, rgba(24, 24, 29, 0.92) 0%, rgba(16, 16, 20, 0.96) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 30px -10px rgba(0, 0, 0, 0.45);
+  background: #141418;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .studio-card:focus-within {
-  border-color: rgba(129, 140, 248, 0.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 12px 36px -10px rgba(99, 102, 241, 0.22);
+  border-color: rgba(129, 140, 248, 0.3);
 }
 
 /* Interactive animated equalizer bars */
@@ -238,18 +233,16 @@ a,
   mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
 }
 
-/* Prevent iOS Safari auto-zoom on focus: inputs must be >= 16px on phones */
+/* Keep mobile inputs proportional: 15px on textareas/inputs (no giant 16px on compact selects!) */
 @media (max-width: 640px) {
   input[type='text'],
   input[type='search'],
-  input[type='email'],
-  input[type='number'],
   input[type='password'],
-  input[type='url'],
-  input:not([type]),
-  textarea,
+  textarea {
+    font-size: 15px;
+  }
   select {
-    font-size: 16px !important;
+    font-size: 13px;
   }
 }
 

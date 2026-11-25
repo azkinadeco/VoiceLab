@@ -25,7 +25,7 @@ export default function TooltipInfo({
 
   return (
     <span
-      className="relative inline-flex items-center"
+      className="relative hidden sm:inline-flex items-center"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >

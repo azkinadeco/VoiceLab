@@ -14,11 +14,12 @@ interface SoundEffectsProps {
 }
 
 const SAMPLE_PROMPTS = [
-  'Cinematic explosion boom',
-  'Sci-fi laser blaster shot',
-  'Gentle rain on window',
-  'Temple bell harmonic chime',
-  'Futuristic whoosh transition',
+  '💥 Ledakan dahsyat',
+  '🌧️ Hujan deras',
+  '🔔 Lonceng notifikasi',
+  '💨 Angin transisi whoosh',
+  '👏 Tepuk tangan penonton',
+  '🚨 Sirine alarm',
 ];
 
 export default function SoundEffects({ onGenerationCreated }: SoundEffectsProps) {
@@ -68,26 +69,26 @@ export default function SoundEffects({ onGenerationCreated }: SoundEffectsProps)
         }
       />
 
-      <div className="studio-card rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <div className="studio-card rounded-2xl p-3.5 sm:p-5 space-y-4">
         <div>
           <textarea
             rows={3}
-            placeholder="Ketik deskripsi efek suara (cth: Cinematic explosion with deep sub bass)..."
+            placeholder="Deskripsikan efek suara… (cth: hujan deras, ledakan, lonceng)"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="w-full rounded-xl bg-dark-950/60 border border-white/10 p-3.5 sm:p-4 text-sm text-white placeholder-dark-400 focus:border-pink-500 focus:outline-none resize-none"
+            className="w-full rounded-xl bg-white/[0.04] p-3 text-[14px] text-white placeholder-dark-500 focus:ring-1 focus:ring-pink-500 focus:outline-none resize-none"
           />
 
-          <div className="mt-3 -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-1.5 overflow-x-auto no-scrollbar fade-x sm:flex-wrap sm:overflow-visible sm:[mask-image:none] sm:[-webkit-mask-image:none]">
+          <div className="mt-2.5 flex gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap">
             {SAMPLE_PROMPTS.map((p, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => {
                   haptic();
-                  setPrompt(p);
+                  setPrompt(p.replace(/^[^\w]+/, '').trim());
                 }}
-                className="shrink-0 whitespace-nowrap h-9 sm:h-auto rounded-full sm:rounded-lg bg-dark-850 border border-white/10 px-3 sm:px-2.5 sm:py-1 text-[13px] sm:text-xs text-dark-200 hover:text-white hover:bg-dark-800 transition-colors"
+                className="shrink-0 whitespace-nowrap h-9 rounded-full bg-white/[0.05] px-3 text-[12.5px] text-dark-200 hover:text-white hover:bg-white/[0.1] active:scale-95 transition-all"
               >
                 {p}
               </button>

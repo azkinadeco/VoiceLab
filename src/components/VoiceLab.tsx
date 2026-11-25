@@ -65,6 +65,7 @@ export default function VoiceLab({
     qualityLabel: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Design form state
@@ -306,104 +307,107 @@ export default function VoiceLab({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-xs font-semibold text-dark-200 mb-1.5">Gender</label>
+                <label className="block text-[12px] font-medium text-dark-300 mb-1">Gender</label>
                 <select
                   value={cloneGender}
                   onChange={(e) => setCloneGender(e.target.value as any)}
-                  className="w-full rounded-xl bg-dark-850 border border-white/10 px-3 h-11 sm:h-auto sm:py-2.5 text-xs font-semibold text-white"
+                  className="w-full rounded-xl bg-white/[0.06] px-3 h-11 text-[13px] font-semibold text-white"
                 >
-                  <option value="male">Pria (Male)</option>
-                  <option value="female">Wanita (Female)</option>
+                  <option value="male">Pria</option>
+                  <option value="female">Wanita</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-dark-200 mb-1.5">
-                  Aksen & Logat
-                </label>
+                <label className="block text-[12px] font-medium text-dark-300 mb-1">Aksen</label>
                 <select
                   value={cloneAccent}
                   onChange={(e) => setCloneAccent(e.target.value)}
-                  className="w-full rounded-xl bg-dark-850 border border-white/10 px-3 h-11 sm:h-auto sm:py-2.5 text-xs font-semibold text-white"
+                  className="w-full rounded-xl bg-white/[0.06] px-3 h-11 text-[13px] font-semibold text-white"
                 >
-                  <option value="Indonesian">🇮🇩 Indonesia (Nasional)</option>
-                  <option value="Indonesian (Jawa)">🇮🇩 Aksen Jawa</option>
-                  <option value="Indonesian (Sunda)">🇮🇩 Aksen Sunda</option>
-                  <option value="American">🇺🇸 English (American)</option>
-                  <option value="British">🇬🇧 English (British)</option>
-                  <option value="Australian">🇦🇺 English (Australian)</option>
-                  <option value="Japanese">🇯🇵 Japanese</option>
-                  <option value="Korean">🇰🇷 Korean</option>
-                  <option value="Arabic">🇸🇦 Arabic</option>
+                  <option value="Indonesian">🇮🇩 Indonesia</option>
+                  <option value="Indonesian (Jawa)">🇮🇩 Jawa</option>
+                  <option value="Indonesian (Sunda)">🇮🇩 Sunda</option>
+                  <option value="American">🇺🇸 Inggris US</option>
+                  <option value="British">🇬🇧 Inggris UK</option>
+                  <option value="Australian">🇦🇺 Australia</option>
+                  <option value="Japanese">🇯🇵 Jepang</option>
+                  <option value="Korean">🇰🇷 Korea</option>
+                  <option value="Arabic">🇸🇦 Arab</option>
                 </select>
               </div>
             </div>
 
+            {/* Optional Avatar Stylizer — collapsed by default so Sampel Suara & Submit stay visible on mobile */}
             <div>
-              <label className="block text-xs font-semibold text-dark-200 mb-1.5">
-                Catatan Karakter (Opsional)
-              </label>
-              <input
-                type="text"
-                placeholder="Misal: Santai, formal, hangat..."
-                value={cloneDescription}
-                onChange={(e) => setCloneDescription(e.target.value)}
-                className="w-full rounded-xl bg-dark-850 border border-white/10 px-3.5 h-11 sm:h-auto sm:py-2.5 text-xs text-white placeholder-dark-400 focus:border-brand-500 focus:outline-none"
-              />
-            </div>
+              <button
+                type="button"
+                onClick={() => setShowAvatarCustomizer(!showAvatarCustomizer)}
+                className="flex h-9 items-center gap-2 rounded-xl bg-white/[0.04] px-3 text-[12px] font-medium text-dark-300 hover:text-white transition-colors"
+              >
+                <span>{selectedEmoji}</span>
+                <span>Kustom Avatar & Catatan</span>
+                <span className="text-[11px] text-dark-500">{showAvatarCustomizer ? '▲' : '▼'}</span>
+              </button>
 
-            {/* Avatar Stylizer */}
-            <div>
-              <label className="block text-xs font-semibold text-dark-200 mb-1.5">
-                Warna Orb & Ikon Avatar
-              </label>
-              <div className="grid grid-cols-7 gap-1 sm:flex sm:items-center sm:gap-2 mb-2">
-                {AVATAR_GRADIENTS.map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => {
-                      haptic();
-                      setSelectedGradient(g.id);
-                    }}
-                    className="flex h-10 sm:h-auto items-center justify-center"
-                    title={g.label}
-                    aria-label={`Warna ${g.label}`}
-                    aria-pressed={selectedGradient === g.id}
-                  >
-                    <span
-                      className={`block h-7 w-7 sm:h-5 sm:w-5 rounded-full transition-all ${
-                        selectedGradient === g.id
-                          ? 'ring-2 ring-white scale-110 shadow-sm'
-                          : 'opacity-60 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: g.bg }}
-                    />
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-5 gap-1.5 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto no-scrollbar">
-                {EMOJI_OPTIONS.map((em) => (
-                  <button
-                    key={em}
-                    type="button"
-                    onClick={() => {
-                      haptic();
-                      setSelectedEmoji(em);
-                    }}
-                    aria-pressed={selectedEmoji === em}
-                    className={`h-11 sm:h-6 w-full sm:w-6 rounded-xl sm:rounded-md text-lg sm:text-xs flex items-center justify-center transition-all ${
-                      selectedEmoji === em
-                        ? 'bg-white/20 ring-1 ring-white/40 sm:ring-0 sm:scale-105 shadow-sm'
-                        : 'bg-dark-850/60 hover:bg-dark-800'
-                    }`}
-                  >
-                    {em}
-                  </button>
-                ))}
-              </div>
+              {showAvatarCustomizer && (
+                <div className="mt-2.5 space-y-3 rounded-xl bg-white/[0.03] p-3 animate-fadeIn">
+                  <input
+                    type="text"
+                    placeholder="Catatan karakter (opsional)…"
+                    value={cloneDescription}
+                    onChange={(e) => setCloneDescription(e.target.value)}
+                    className="w-full rounded-xl bg-white/[0.06] px-3 h-10 text-[13px] text-white placeholder-dark-500 focus:outline-none"
+                  />
+                  <div className="grid grid-cols-7 gap-1">
+                    {AVATAR_GRADIENTS.map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          haptic();
+                          setSelectedGradient(g.id);
+                        }}
+                        className="flex h-9 items-center justify-center"
+                        title={g.label}
+                        aria-label={`Warna ${g.label}`}
+                        aria-pressed={selectedGradient === g.id}
+                      >
+                        <span
+                          className={`block h-6 w-6 rounded-full transition-all ${
+                            selectedGradient === g.id
+                              ? 'ring-2 ring-white scale-110'
+                              : 'opacity-60 hover:opacity-100'
+                          }`}
+                          style={{ backgroundColor: g.bg }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {EMOJI_OPTIONS.map((em) => (
+                      <button
+                        key={em}
+                        type="button"
+                        onClick={() => {
+                          haptic();
+                          setSelectedEmoji(em);
+                        }}
+                        aria-pressed={selectedEmoji === em}
+                        className={`h-10 rounded-xl text-base flex items-center justify-center transition-all ${
+                          selectedEmoji === em
+                            ? 'bg-white/20 ring-1 ring-white/40'
+                            : 'bg-white/[0.04] hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
