@@ -228,7 +228,10 @@ async function runEdgeNeuralSingle(
     try {
       await tts.setMetadata(voiceEdgeId, format);
     } catch {
-      await tts.setMetadata('id-ID-ArdiNeural', format);
+      const fallbackEdge = voiceEdgeId.toLowerCase().startsWith('ja-')
+        ? 'ja-JP-NanamiNeural'
+        : 'id-ID-ArdiNeural';
+      await tts.setMetadata(fallbackEdge, format);
     }
 
     const stabilitySpeedOffset = ((50 - settings.stability) / 500) * 0.1;
@@ -554,9 +557,12 @@ export async function synthesizeSpeech(
     ? {
         ...settings,
         speed: Math.max(0.6, Math.min(1.8, settings.speed * emo.speedMul)),
-        pitch: Math.max(-25, Math.min(25, settings.pitch + emo.pitchAdd)),
+        pitch: Math.max(-35, Math.min(50, settings.pitch + emo.pitchAdd)),
       }
-    : settings;
+    : {
+        ...settings,
+        pitch: Math.max(-35, Math.min(50, settings.pitch)),
+      };
 
   // Optional Tier 0A: Official ElevenLabs API
   if (appSettings.ttsProvider === 'elevenlabs-api' && appSettings.elevenLabsApiKey) {

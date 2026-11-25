@@ -83,10 +83,11 @@ export async function POST(request: NextRequest) {
     // Apply pronunciation dictionary rules before synthesis
     const processedText = applyPronunciationDictionary(text.trim());
 
-    // Apply cloned voice pitch offset if present
+    // Apply per-voice pitch & speed character profile
     const effectiveSettings: GenerationSettings = {
       ...genSettings,
-      pitch: genSettings.pitch + ((targetVoice as any).pitchOffset || 0),
+      speed: Math.max(0.6, Math.min(1.8, genSettings.speed * (targetVoice.defaultSpeed || 1.0))),
+      pitch: genSettings.pitch + (targetVoice.pitchOffset || 0),
     };
 
     // Synthesize voice

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       sampleText,
       voice.voiceIdEdge,
       {
-        speed: 1.0,
+        speed: voice.defaultSpeed || 1.0,
         pitch: voice.pitchOffset || 0,
         stability: 80,
         similarity: 85,

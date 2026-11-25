@@ -21,6 +21,7 @@ export interface Voice {
   };
   clonedFromAudio?: string;
   pitchOffset?: number;
+  defaultSpeed?: number;
   createdAt: string;
   isFavorite?: boolean;
 }
