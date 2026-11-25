@@ -5,6 +5,13 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+export interface SynthesisResult {
+  buffer: Buffer;
+  duration: number;
+  format: 'mp3' | 'wav';
+  engine: string;
+}
+
 function escapeXmlForSsml(raw: string): string {
   return raw
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
@@ -51,7 +58,6 @@ function splitTextIntoChunks(text: string, maxLen = 175): string[] {
       if (s.length <= maxLen) {
         current = s;
       } else {
-        // Hard split long sentence by words
         const words = s.split(' ');
         let sub = '';
         for (const w of words) {
@@ -70,12 +76,25 @@ function splitTextIntoChunks(text: string, maxLen = 175): string[] {
   return chunks.length > 0 ? chunks : [text.slice(0, maxLen)];
 }
 
-// Tier 2 Fallback: Google Neural TTS MP3 over HTTPS (No API key needed, supports ID, JW, SU, EN-GB, EN-US, JA, KO, AR, etc.)
+function estimateDurationSec(text: string, speed: number): number {
+  const wordCount = Math.max(1, text.trim().split(/\s+/).length);
+  return Math.max(1.0, Math.round(((wordCount / 145) * 60 / Math.max(0.5, speed)) * 10) / 10);
+}
+
+function estimateWavDurationSec(wavBuffer: Buffer): number | null {
+  if (wavBuffer.length < 44 || wavBuffer.slice(0, 4).toString('ascii') !== 'RIFF') return null;
+  const byteRate = wavBuffer.readUInt32LE(28);
+  const dataSize = wavBuffer.length - 44;
+  if (byteRate <= 0 || dataSize <= 0) return null;
+  return Math.max(0.5, Math.round((dataSize / byteRate) * 10) / 10);
+}
+
+// Tier 2 Fallback: Google Neural TTS MP3 over HTTPS
 async function synthesizeGoogleNeuralFallback(
   text: string,
   voiceEdgeId: string,
   settings: GenerationSettings
-): Promise<{ buffer: Buffer; duration: number }> {
+): Promise<SynthesisResult> {
   const tl = mapEdgeVoiceToLangCode(voiceEdgeId);
   const chunks = splitTextIntoChunks(text, 170);
   const buffers: Buffer[] = [];
@@ -86,26 +105,51 @@ async function synthesizeGoogleNeuralFallback(
       chunk
     )}&tl=${encodeURIComponent(tl)}&total=1&idx=0&textlen=${chunk.length}&client=tw-ob&ttsspeed=${ttsspeed}`;
 
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`Google TTS HTTP ${res.status}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`Google TTS HTTP ${res.status}`);
+      }
+      const arr = await res.arrayBuffer();
+      buffers.push(Buffer.from(arr));
+    } finally {
+      clearTimeout(timer);
     }
-    const arr = await res.arrayBuffer();
-    buffers.push(Buffer.from(arr));
   }
 
   const finalBuffer = Buffer.concat(buffers);
   if (finalBuffer.length < 256) {
     throw new Error('Google TTS returned empty audio buffer');
   }
-  const wordCount = text.trim().split(/\s+/).length;
-  const duration = Math.max(1.2, Math.round(((wordCount / 140) * 60 / settings.speed) * 10) / 10);
-  return { buffer: finalBuffer, duration };
+  return {
+    buffer: finalBuffer,
+    duration: estimateDurationSec(text, settings.speed),
+    format: 'mp3',
+    engine: 'Google Neural TTS (Fallback)',
+  };
+}
+
+let cachedMacVoices: Set<string> | null = null;
+function getInstalledMacVoices(): Set<string> {
+  if (cachedMacVoices) return cachedMacVoices;
+  const set = new Set<string>();
+  try {
+    const out = execFileSync('/usr/bin/say', ['-v', '?'], { encoding: 'utf8', timeout: 5000 });
+    for (const line of out.split('\n')) {
+      const name = line.trim().split(/\s{2,}/)[0]?.trim();
+      if (name) set.add(name);
+    }
+  } catch {}
+  cachedMacVoices = set;
+  return set;
 }
 
 // Tier 3 Fallback: macOS Native Offline Speech Engine (/usr/bin/say + /usr/bin/afconvert)
@@ -113,30 +157,36 @@ function synthesizeMacNativeOffline(
   text: string,
   voiceEdgeId: string,
   settings: GenerationSettings
-): { buffer: Buffer; duration: number } {
+): SynthesisResult {
   const tmpId = `voicelab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const aiffPath = path.join(os.tmpdir(), `${tmpId}.aiff`);
   const wavPath = path.join(os.tmpdir(), `${tmpId}.wav`);
 
   try {
     const lower = voiceEdgeId.toLowerCase();
-    let macVoice = 'Damayanti'; // macOS built-in Indonesian voice
-    if (lower.startsWith('en-gb')) macVoice = 'Daniel';
-    else if (lower.startsWith('en-au')) macVoice = 'Karen';
-    else if (lower.startsWith('en-')) macVoice = 'Samantha';
-    else if (lower.startsWith('ja-')) macVoice = 'Kyoko';
-    else if (lower.startsWith('ko-')) macVoice = 'Yuna';
+    const installed = getInstalledMacVoices();
+    const candidates: string[] = [];
+    if (lower.startsWith('en-gb')) candidates.push('Daniel', 'Serena', 'Samantha');
+    else if (lower.startsWith('en-au')) candidates.push('Karen', 'Lee', 'Samantha');
+    else if (lower.startsWith('en-')) candidates.push('Samantha', 'Alex', 'Daniel');
+    else if (lower.startsWith('ja-')) candidates.push('Kyoko', 'Otoya');
+    else if (lower.startsWith('ko-')) candidates.push('Yuna');
+    else if (lower.startsWith('zh-')) candidates.push('Tingting', 'Sinji');
+    else if (lower.startsWith('ar-')) candidates.push('Majed');
+    else candidates.push('Damayanti', 'Samantha');
 
+    const macVoice = candidates.find((c) => installed.has(c));
     const wordsPerMin = Math.round(175 * Math.max(0.5, Math.min(1.8, settings.speed)));
 
+    const args = macVoice
+      ? ['-v', macVoice, '-r', String(wordsPerMin), '-o', aiffPath, text]
+      : ['-r', String(wordsPerMin), '-o', aiffPath, text];
+
     try {
-      execFileSync('/usr/bin/say', ['-v', macVoice, '-r', String(wordsPerMin), '-o', aiffPath, text], {
-        timeout: 15000,
-      });
+      execFileSync('/usr/bin/say', args, { timeout: 25000 });
     } catch {
-      // Fallback to default system voice if specific voice isn't installed
       execFileSync('/usr/bin/say', ['-r', String(wordsPerMin), '-o', aiffPath, text], {
-        timeout: 15000,
+        timeout: 25000,
       });
     }
 
@@ -145,9 +195,13 @@ function synthesizeMacNativeOffline(
     });
 
     const wavBuffer = fs.readFileSync(wavPath);
-    const wordCount = text.trim().split(/\s+/).length;
-    const duration = Math.max(1.2, Math.round(((wordCount / 140) * 60 / settings.speed) * 10) / 10);
-    return { buffer: wavBuffer, duration };
+    const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
+    return {
+      buffer: wavBuffer,
+      duration,
+      format: 'wav',
+      engine: 'macOS Offline Speech (Local)',
+    };
   } finally {
     try {
       if (fs.existsSync(aiffPath)) fs.unlinkSync(aiffPath);
@@ -161,65 +215,90 @@ async function runEdgeNeuralSingle(
   voiceEdgeId: string,
   settings: GenerationSettings
 ): Promise<Buffer> {
-  const tts = new MsEdgeTTS();
+  const tts = new MsEdgeTTS({
+    connectionTimeoutMs: 8000,
+    synthesisTimeoutMs: 25000,
+  });
   const format = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
 
   try {
-    await tts.setMetadata(voiceEdgeId, format);
-  } catch {
-    await tts.setMetadata('id-ID-ArdiNeural', format);
+    try {
+      await tts.setMetadata(voiceEdgeId, format);
+    } catch {
+      await tts.setMetadata('id-ID-ArdiNeural', format);
+    }
+
+    const stabilitySpeedOffset = ((50 - settings.stability) / 500) * 0.1;
+    const effectiveSpeed = Math.max(0.5, Math.min(1.9, settings.speed + stabilitySpeedOffset));
+    const ratePct = Math.round((effectiveSpeed - 1.0) * 100);
+    const rateStr = ratePct >= 0 ? `+${ratePct}%` : `${ratePct}%`;
+
+    const stylePitchBoost = Math.round((settings.styleExaggeration / 100) * 8);
+    const pitchHz = Math.round(settings.pitch + stylePitchBoost);
+    const pitchStr = pitchHz >= 0 ? `+${pitchHz}Hz` : `${pitchHz}Hz`;
+
+    const boostVol = settings.speakerBoost ? 10 : 0;
+    const clarityVol = Math.round(((settings.similarity - 50) / 50) * 8);
+    const totalVol = Math.max(-20, Math.min(30, boostVol + clarityVol));
+    const volumeStr = totalVol >= 0 ? `+${totalVol}%` : `${totalVol}%`;
+
+    const escapedSsmlText = escapeXmlForSsml(cleanText);
+
+    const streamResult = tts.toStream(escapedSsmlText, {
+      pitch: pitchStr,
+      rate: rateStr,
+      volume: volumeStr,
+    });
+    const audioStream = (streamResult as any).audioStream || streamResult;
+
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('Edge TTS stream timeout'));
+      }, 22000);
+
+      audioStream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      audioStream.on('end', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      audioStream.on('error', (err: any) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+
+    const buf = Buffer.concat(chunks);
+    if (buf.length < 200) {
+      throw new Error('Edge TTS returned empty audio stream');
+    }
+    return buf;
+  } finally {
+    try {
+      tts.close();
+    } catch {}
   }
+}
 
-  // Speed + Stability modulation
-  const stabilitySpeedOffset = ((50 - settings.stability) / 500) * 0.1;
-  const effectiveSpeed = Math.max(0.5, Math.min(1.9, settings.speed + stabilitySpeedOffset));
-  const ratePct = Math.round((effectiveSpeed - 1.0) * 100);
-  const rateStr = ratePct >= 0 ? `+${ratePct}%` : `${ratePct}%`;
-
-  // Pitch + Style Exaggeration modulation (makes Style Exaggeration slider actually expressive!)
-  const stylePitchBoost = Math.round((settings.styleExaggeration / 100) * 8);
-  const pitchHz = Math.round(settings.pitch + stylePitchBoost);
-  const pitchStr = pitchHz >= 0 ? `+${pitchHz}Hz` : `${pitchHz}Hz`;
-
-  // Volume + Speaker Boost & Clarity Similarity modulation
-  const boostVol = settings.speakerBoost ? 10 : 0;
-  const clarityVol = Math.round(((settings.similarity - 50) / 50) * 8);
-  const totalVol = Math.max(-20, Math.min(30, boostVol + clarityVol));
-  const volumeStr = totalVol >= 0 ? `+${totalVol}%` : `${totalVol}%`;
-
-  const escapedSsmlText = escapeXmlForSsml(cleanText);
-
-  const streamResult = tts.toStream(escapedSsmlText, {
-    pitch: pitchStr,
-    rate: rateStr,
-    volume: volumeStr,
-  });
-  const audioStream = (streamResult as any).audioStream || streamResult;
-
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('Edge TTS stream timeout'));
-    }, 20000);
-
-    audioStream.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    audioStream.on('end', () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    audioStream.on('error', (err: any) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
-
-  const buf = Buffer.concat(chunks);
-  if (buf.length < 200) {
-    throw new Error('Edge TTS returned empty audio stream');
+/**
+ * Safely merge multiple audio buffers (handles both MP3 frames and RIFF WAV files).
+ */
+export function mergeAudioBuffers(buffers: Buffer[]): { buffer: Buffer; format: 'mp3' | 'wav' } {
+  if (buffers.length === 0) {
+    return { buffer: Buffer.alloc(0), format: 'mp3' };
   }
-  return buf;
+  const allWav = buffers.every((b) => b.length > 44 && b.slice(0, 4).toString('ascii') === 'RIFF');
+  if (allWav) {
+    const header = Buffer.from(buffers[0].slice(0, 44));
+    const pcmParts = buffers.map((b) => b.slice(44));
+    const totalData = pcmParts.reduce((sum, p) => sum + p.length, 0);
+    header.writeUInt32LE(36 + totalData, 4);
+    header.writeUInt32LE(totalData, 40);
+    return { buffer: Buffer.concat([header, ...pcmParts]), format: 'wav' };
+  }
+  return { buffer: Buffer.concat(buffers), format: 'mp3' };
 }
 
 export async function synthesizeSpeech(
@@ -227,10 +306,10 @@ export async function synthesizeSpeech(
   voiceEdgeId: string,
   settings: GenerationSettings,
   appSettings: AppSettings
-): Promise<{ buffer: Buffer; duration: number }> {
+): Promise<SynthesisResult> {
   const cleanText = text.trim();
 
-  // Optional Tier 0: Official ElevenLabs API if configured by user
+  // Optional Tier 0A: Official ElevenLabs API
   if (appSettings.ttsProvider === 'elevenlabs-api' && appSettings.elevenLabsApiKey) {
     try {
       const elevenVoiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -252,36 +331,72 @@ export async function synthesizeSpeech(
         }),
       });
       if (res.ok) {
-        const arrayBuf = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuf);
-        const wordCount = cleanText.split(/\s+/).length;
-        const duration = Math.max(1, (wordCount / 150) * 60 / settings.speed);
-        return { buffer, duration };
+        const buffer = Buffer.from(await res.arrayBuffer());
+        return {
+          buffer,
+          duration: estimateDurationSec(cleanText, settings.speed),
+          format: 'mp3',
+          engine: 'ElevenLabs Multilingual v2',
+        };
       }
     } catch (e) {
       console.warn('ElevenLabs API failed, falling back to Neural Edge TTS:', e);
     }
   }
 
+  // Optional Tier 0B: OpenAI TTS API
+  if (appSettings.ttsProvider === 'openai-api' && appSettings.openAiApiKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSettings.openAiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'tts-1',
+          voice: 'alloy',
+          input: cleanText,
+          speed: Math.max(0.25, Math.min(4.0, settings.speed)),
+        }),
+      });
+      if (res.ok) {
+        const buffer = Buffer.from(await res.arrayBuffer());
+        return {
+          buffer,
+          duration: estimateDurationSec(cleanText, settings.speed),
+          format: 'mp3',
+          engine: 'OpenAI TTS-1',
+        };
+      }
+    } catch (e) {
+      console.warn('OpenAI TTS API failed, falling back to Neural Edge TTS:', e);
+    }
+  }
+
   // Tier 1: Microsoft Edge Neural TTS (with XML escaping & automatic retry)
+  let targetEdgeId = voiceEdgeId;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const buffer = await runEdgeNeuralSingle(cleanText, voiceEdgeId, settings);
-      const wordCount = cleanText.split(/\s+/).length;
-      const duration = Math.max(1.2, Math.round(((wordCount / 140) * 60 / settings.speed) * 10) / 10);
-      return { buffer, duration };
+      const buffer = await runEdgeNeuralSingle(cleanText, targetEdgeId, settings);
+      return {
+        buffer,
+        duration: estimateDurationSec(cleanText, settings.speed),
+        format: 'mp3',
+        engine: 'Neural Turbo v2.5 (Local)',
+      };
     } catch (edgeErr: any) {
-      console.warn(`Edge Neural TTS attempt ${attempt} failed for ${voiceEdgeId}:`, edgeErr?.message || edgeErr);
-      // If regional voice (e.g. jv-ID or su-ID) was rejected by Edge endpoint, retry once with id-ID-ArdiNeural / id-ID-GadisNeural
-      if (attempt === 1 && (voiceEdgeId.startsWith('jv-') || voiceEdgeId.startsWith('su-'))) {
-        voiceEdgeId = voiceEdgeId.toLowerCase().includes('siti') || voiceEdgeId.toLowerCase().includes('tuti')
-          ? 'id-ID-GadisNeural'
-          : 'id-ID-ArdiNeural';
+      console.warn(`Edge Neural TTS attempt ${attempt} failed for ${targetEdgeId}:`, edgeErr?.message || edgeErr);
+      if (attempt === 1 && (targetEdgeId.startsWith('jv-') || targetEdgeId.startsWith('su-'))) {
+        targetEdgeId =
+          targetEdgeId.toLowerCase().includes('siti') || targetEdgeId.toLowerCase().includes('tuti')
+            ? 'id-ID-GadisNeural'
+            : 'id-ID-ArdiNeural';
       }
     }
   }
 
-  // Tier 2: Google Translate Neural Speech API (Real human speech over HTTPS, zero sine-wave beep)
+  // Tier 2: Google Translate Neural Speech API
   try {
     console.log('Switching to Tier 2 Google Neural Speech Engine for:', voiceEdgeId);
     return await synthesizeGoogleNeuralFallback(cleanText, voiceEdgeId, settings);

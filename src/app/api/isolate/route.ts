@@ -11,12 +11,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Audio data is required' }, { status: 400 });
     }
 
-    const isWav = audioBase64.startsWith('data:audio/wav');
-    const cleanBase64 = audioBase64.replace(/^data:audio\/[\w+-]+;base64,/, '');
+    const b64Idx = audioBase64.indexOf('base64,');
+    const cleanBase64 = b64Idx >= 0 ? audioBase64.slice(b64Idx + 7) : audioBase64;
     const inputBuffer = Buffer.from(cleanBase64, 'base64');
+    if (inputBuffer.length < 64) {
+      return NextResponse.json({ error: 'Audio data kosong atau tidak valid' }, { status: 400 });
+    }
 
     const genId = `isolated-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const ext = isWav ? 'wav' : 'mp3';
+    const isWav = inputBuffer.slice(0, 4).toString('ascii') === 'RIFF' || audioBase64.startsWith('data:audio/wav');
+    const ext = isWav ? 'wav' : audioBase64.includes('webm') ? 'webm' : 'mp3';
     const outputFilename = `${genId}.${ext}`;
 
     const { relativeUrl } = await saveAudioFile(inputBuffer, 'isolated', outputFilename);

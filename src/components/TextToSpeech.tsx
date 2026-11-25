@@ -645,10 +645,10 @@ export default function TextToSpeech({
             duration={lastGen.duration}
             autoPlay
             compact={isIphoneMode}
-            fileName={`${lastGen.voiceName}-${lastGen.id}.mp3`}
+            fileName={`${lastGen.voiceName}-${lastGen.id}.${lastGen.audioUrl.endsWith('.wav') ? 'wav' : 'mp3'}`}
             onOpenTrimmer={
               onOpenTrimmer
-                ? (url, dur) => onOpenTrimmer(url, dur, `${lastGen.voiceName}-${lastGen.id}.mp3`)
+                ? (url, dur) => onOpenTrimmer(url, dur, `${lastGen.voiceName}-${lastGen.id}.${lastGen.audioUrl.endsWith('.wav') ? 'wav' : 'mp3'}`)
                 : undefined
             }
           />
@@ -656,12 +656,12 @@ export default function TextToSpeech({
           <div className="grid grid-cols-3 gap-2">
             <a
               href={lastGen.audioUrl}
-              download={`${lastGen.voiceName}-${lastGen.id}.mp3`}
-              onClick={() => toast('Mengunduh MP3…', 'info')}
+              download={`${lastGen.voiceName}-${lastGen.id}.${lastGen.audioUrl.endsWith('.wav') ? 'wav' : 'mp3'}`}
+              onClick={() => toast(`Mengunduh ${lastGen.audioUrl.endsWith('.wav') ? 'WAV' : 'MP3'}…`, 'info')}
               className="flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-white text-[13px] font-bold text-black"
             >
               <Download className="h-4 w-4" />
-              MP3
+              {lastGen.audioUrl.endsWith('.wav') ? 'WAV' : 'MP3'}
             </a>
             <button
               disabled={!lastGen.srtSubtitle}

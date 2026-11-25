@@ -62,18 +62,25 @@ export async function POST(request: NextRequest) {
 
     const appSettings = getAppSettings();
     const genId = `gen-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const filename = `${genId}.mp3`;
 
     // Apply pronunciation dictionary rules before synthesis
     const processedText = applyPronunciationDictionary(text.trim());
 
+    // Apply cloned voice pitch offset if present
+    const effectiveSettings: GenerationSettings = {
+      ...genSettings,
+      pitch: genSettings.pitch + ((targetVoice as any).pitchOffset || 0),
+    };
+
     // Synthesize voice
-    const { buffer, duration } = await synthesizeSpeech(
+    const { buffer, duration, format, engine } = await synthesizeSpeech(
       processedText,
       targetVoice.voiceIdEdge || 'en-US-ChristopherNeural',
-      genSettings,
+      effectiveSettings,
       appSettings
     );
+
+    const filename = `${genId}.${format}`;
 
     // Save audio file locally to PC storage
     const { relativeUrl } = await saveAudioFile(buffer, 'generations', filename);
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
       audioUrl: relativeUrl,
       duration,
       createdAt: new Date().toISOString(),
-      model: appSettings.ttsProvider === 'elevenlabs-api' ? 'Eleven Multilingual v2' : 'Neural Turbo v2.5 (Local)',
+      model: engine,
       type: type,
       fileSize: buffer.length,
       starred: false,

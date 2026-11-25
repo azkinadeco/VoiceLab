@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { synthesizeSpeech } from '@/lib/tts-engine';
+import { synthesizeSpeech, mergeAudioBuffers } from '@/lib/tts-engine';
 import {
   getAllVoices,
   addGeneration,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       const voice = voices.find((v) => v.id === block.voiceId) || voices[0];
       const processedText = applyPronunciationDictionary(block.text.trim());
 
-      const { buffer, duration } = await synthesizeSpeech(
+      const { buffer, duration, format } = await synthesizeSpeech(
         processedText,
         voice.voiceIdEdge || 'en-US-ChristopherNeural',
         {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         appSettings
       );
 
-      const blockFile = `studio-line-${Date.now()}-${i}.mp3`;
+      const blockFile = `studio-line-${Date.now()}-${i}.${format}`;
       const savedBlock = await saveAudioFile(buffer, 'studio', blockFile);
 
       audioBuffers.push(buffer);
@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Concatenate MP3 buffers into master studio file
-    const masterBuffer = Buffer.concat(audioBuffers);
+    // Safely concatenate MP3 or WAV buffers into master studio file
+    const { buffer: masterBuffer, format: masterFormat } = mergeAudioBuffers(audioBuffers);
     const masterId = `studio-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const masterFilename = `${masterId}.mp3`;
+    const masterFilename = `${masterId}.${masterFormat}`;
     const { relativeUrl } = await saveAudioFile(masterBuffer, 'studio', masterFilename);
 
     const scriptSummary = validBlocks

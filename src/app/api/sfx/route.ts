@@ -31,11 +31,13 @@ function synthesizeSoundEffect(prompt: string, durationSec = 3.0): Buffer {
 
   const samples = new Float32Array(totalSamples);
 
-  const isExplosion = p.includes('explosion') || p.includes('boom') || p.includes('blast') || p.includes('thunder') || p.includes('impact');
-  const isLaser = p.includes('laser') || p.includes('blaster') || p.includes('pew') || p.includes('ray');
-  const isRain = p.includes('rain') || p.includes('water') || p.includes('ocean') || p.includes('wave') || p.includes('stream');
-  const isBell = p.includes('bell') || p.includes('chime') || p.includes('ding') || p.includes('notification');
-  const isWhoosh = p.includes('whoosh') || p.includes('swoosh') || p.includes('transition') || p.includes('wind');
+  const isExplosion = /explosion|boom|blast|thunder|impact|ledak|bom|petir|guntur|dentum/.test(p);
+  const isLaser = /laser|blaster|pew|ray|tembak|sci-fi/.test(p);
+  const isRain = /rain|water|ocean|wave|stream|hujan|air|ombak|sungai|laut|gerimis/.test(p);
+  const isBell = /bell|chime|ding|notification|lonceng|bel|notifikasi|ting/.test(p);
+  const isWhoosh = /whoosh|swoosh|transition|wind|angin|transisi|desir|wush|geser/.test(p);
+  const isAlarm = /alarm|siren|sirine|warning|bahaya|beep/.test(p);
+  const isApplause = /applause|clap|tepuk|sorak|crowd/.test(p);
 
   let lastNoise = 0;
   for (let i = 0; i < totalSamples; i++) {
@@ -78,6 +80,17 @@ function synthesizeSoundEffect(prompt: string, durationSec = 3.0): Buffer {
       const centerFreq = 400 + 1200 * Math.sin(Math.PI * progress);
       const tone = Math.sin(2 * Math.PI * centerFreq * t);
       s = (noise * 0.7 + tone * 0.3) * Math.pow(envelope, 2);
+    } else if (isAlarm) {
+      // Dual-tone siren sweep
+      const freq = 660 + 260 * Math.sin(2 * Math.PI * 2.5 * t);
+      const gate = Math.sin(2 * Math.PI * 5 * t) > -0.2 ? 1 : 0.15;
+      s = Math.sin(2 * Math.PI * freq * t) * 0.65 * gate;
+    } else if (isApplause) {
+      // Layered burst noise simulating crowd clapping
+      const burst = Math.pow(0.5 + 0.5 * Math.sin(2 * Math.PI * 7.3 * t) * Math.cos(2 * Math.PI * 11.7 * t), 2);
+      const noise = Math.random() * 2 - 1;
+      const env = Math.min(1, t * 3) * Math.min(1, (durationSec - t) * 2.5);
+      s = noise * (0.35 + 0.65 * burst) * env * 0.75;
     } else {
       // Futuristic synth ambient drop
       const baseFreq = 220;
@@ -121,7 +134,11 @@ export async function POST(request: NextRequest) {
       text: prompt.trim(),
       voiceId: 'sfx-generator',
       voiceName: 'Sound FX Engine',
-      voiceAvatar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80',
+      voiceAvatar:
+        'data:image/svg+xml;utf8,' +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="58" fill="#ec4899"/><text x="60" y="70" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700" font-size="30">SFX</text></svg>'
+        ),
       audioUrl: relativeUrl,
       duration: parseFloat(duration) || 3.0,
       createdAt: new Date().toISOString(),

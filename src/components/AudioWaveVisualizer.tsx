@@ -96,8 +96,13 @@ export default function AudioWaveVisualizer({
     const audio = audioRef.current;
     if (!audio) return;
 
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setTotalDuration(duration || 0);
+    audio.load();
+
     const handleLoadedMetadata = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setTotalDuration(audio.duration);
       }
     };
@@ -105,6 +110,9 @@ export default function AudioWaveVisualizer({
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
     };
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
 
     const handleEnded = () => {
       setIsPlaying(false);
@@ -114,6 +122,8 @@ export default function AudioWaveVisualizer({
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
 
     if (autoPlay) {
@@ -123,6 +133,8 @@ export default function AudioWaveVisualizer({
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
     };
   }, [audioUrl, autoPlay, onEnded]);

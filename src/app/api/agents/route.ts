@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       const voice = voices.find((v) => v.id === agent.voiceId) || voices[0];
       const appSettings = getAppSettings();
 
-      const { buffer, duration } = await synthesizeSpeech(
+      const { buffer, duration, format } = await synthesizeSpeech(
         replyText,
         voice.voiceIdEdge,
         {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         appSettings
       );
 
-      const fileName = `agent-${agent.id}-${Date.now()}.mp3`;
+      const fileName = `agent-${agent.id}-${Date.now()}.${format}`;
       const { relativeUrl } = await saveAudioFile(buffer, 'generations', fileName);
 
       const newGen: Generation = {

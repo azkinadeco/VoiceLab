@@ -167,7 +167,9 @@ export default function VoiceLab({
               acousticStats ? ` • ~${acousticStats.estimatedPitchHz}Hz` : ''
             })`,
           audioBase64,
+          category: 'cloned',
           age: 'young',
+          estimatedPitchHz: acousticStats?.estimatedPitchHz,
           avatarGradient: selectedGradient,
           avatarEmoji: selectedEmoji,
         }),
@@ -209,6 +211,7 @@ export default function VoiceLab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: designName.trim(),
+          category: 'designed',
           gender: designGender,
           accent: designAccent,
           age: designAge,

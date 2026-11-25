@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
+      category = 'cloned',
       gender = 'male',
       accent = 'Indonesian',
       description = '',
@@ -43,21 +44,29 @@ export async function POST(request: NextRequest) {
       labels = {},
       avatarGradient,
       avatarEmoji,
+      estimatedPitchHz,
     } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Voice name is required' }, { status: 400 });
     }
 
-    const voiceId = `clone-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const voiceId = `${category === 'designed' ? 'design' : 'clone'}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     let previewUrl = '';
 
-    if (audioBase64) {
-      const base64Data = audioBase64.replace(/^data:audio\/[\w+-]+;base64,/, '');
+    if (audioBase64 && typeof audioBase64 === 'string') {
+      const mimeMatch = audioBase64.match(/^data:audio\/([\w.+-]+)/);
+      const mimeSub = (mimeMatch?.[1] || '').toLowerCase();
+      const b64Idx = audioBase64.indexOf('base64,');
+      const base64Data = b64Idx >= 0 ? audioBase64.slice(b64Idx + 7) : audioBase64;
       const audioBuffer = Buffer.from(base64Data, 'base64');
-      const filename = `${voiceId}-sample.mp3`;
-      const saved = await saveAudioFile(audioBuffer, 'voices', filename);
-      previewUrl = saved.relativeUrl;
+      if (audioBuffer.length > 64) {
+        const isWav = audioBuffer.slice(0, 4).toString('ascii') === 'RIFF' || mimeSub.includes('wav');
+        const ext = isWav ? 'wav' : mimeSub.includes('webm') ? 'webm' : mimeSub.includes('ogg') ? 'ogg' : 'mp3';
+        const filename = `${voiceId}-sample.${ext}`;
+        const saved = await saveAudioFile(audioBuffer, 'voices', filename);
+        previewUrl = saved.relativeUrl;
+      }
     }
 
     // Map accent & gender to optimal neural acoustic profile
@@ -85,10 +94,21 @@ export async function POST(request: NextRequest) {
 
     const avatarUrl = createClonedOrbSvg(name, gender, avatarGradient, avatarEmoji);
 
+    // Compute subtle pitch offset from analyzed fundamental frequency (Hz)
+    let pitchOffset = 0;
+    if (typeof estimatedPitchHz === 'number' && estimatedPitchHz > 60 && estimatedPitchHz < 350) {
+      const refHz = gender === 'female' ? 205 : 130;
+      pitchOffset = Math.max(-12, Math.min(12, Math.round((estimatedPitchHz - refHz) / 8)));
+    } else if (age === 'old') {
+      pitchOffset = -4;
+    } else if (age === 'young') {
+      pitchOffset = 2;
+    }
+
     const newVoice: Voice = {
       id: voiceId,
       name: name.trim(),
-      category: 'cloned',
+      category: category === 'designed' ? 'designed' : 'cloned',
       gender: gender as any,
       accent,
       language: accLower.includes('indonesia') || accLower.includes('jawa') || accLower.includes('sunda')
@@ -100,10 +120,11 @@ export async function POST(request: NextRequest) {
       avatarGradient,
       avatarEmoji,
       voiceIdEdge: baseVoiceId,
+      pitchOffset,
       labels: {
         age: age as any,
-        useCase: 'Cloned Voice',
-        tone: `Cloned • ${accent}`,
+        useCase: category === 'designed' ? 'Designed Voice' : 'Cloned Voice',
+        tone: `${category === 'designed' ? 'Designed' : 'Cloned'} • ${accent}`,
         gender,
         ...labels,
       },

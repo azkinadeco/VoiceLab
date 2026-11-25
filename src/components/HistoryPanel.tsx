@@ -26,7 +26,7 @@ export default function HistoryPanel({
   onOpenTrimmer,
 }: HistoryPanelProps) {
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'tts' | 'sfx' | 'isolated' | 'starred'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'tts' | 'speech-to-speech' | 'sfx' | 'isolated' | 'starred'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -39,6 +39,7 @@ export default function HistoryPanel({
 
     if (filterType === 'starred') return gen.starred;
     if (filterType === 'tts') return gen.type === 'tts' || !gen.type;
+    if (filterType === 'speech-to-speech') return gen.type === 'speech-to-speech';
     if (filterType === 'sfx') return gen.type === 'sfx';
     if (filterType === 'isolated') return gen.type === 'isolated';
 
@@ -160,6 +161,7 @@ export default function HistoryPanel({
             [
               { id: 'all', label: 'Semua' },
               { id: 'tts', label: 'Voiceover' },
+              { id: 'speech-to-speech', label: 'Ubah Suara' },
               { id: 'sfx', label: 'SFX' },
               { id: 'isolated', label: 'Isolator' },
               { id: 'starred', label: '⭐ Favorit' },

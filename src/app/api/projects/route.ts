@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       const appSettings = getAppSettings();
       const processed = applyPronunciationDictionary(chapter.content.trim());
 
-      const { buffer, duration } = await synthesizeSpeech(
+      const { buffer, duration, format } = await synthesizeSpeech(
         processed,
         voice.voiceIdEdge,
         {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         appSettings
       );
 
-      const fileName = `proj-${project.id}-${chapter.id}-${Date.now()}.mp3`;
+      const fileName = `proj-${project.id}-${chapter.id}-${Date.now()}.${format}`;
       const { relativeUrl } = await saveAudioFile(buffer, 'projects', fileName);
 
       chapter.audioUrl = relativeUrl;

@@ -131,9 +131,8 @@ export async function POST(request: NextRequest) {
 
     const appSettings = getAppSettings();
     const dubId = `dub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const filename = `${dubId}.mp3`;
 
-    const { buffer, duration } = await synthesizeSpeech(
+    const { buffer, duration, format } = await synthesizeSpeech(
       finalTranslated,
       targetVoice.voiceIdEdge,
       {
@@ -147,6 +146,7 @@ export async function POST(request: NextRequest) {
       appSettings
     );
 
+    const filename = `${dubId}.${format}`;
     const { relativeUrl } = await saveAudioFile(buffer, 'dubbing', filename);
     const srtContent = buildSrt(finalTranslated, duration);
 

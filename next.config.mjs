@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverComponentsExternalPackages: ['msedge-tts'],
+    serverComponentsExternalPackages: ['msedge-tts', '@huggingface/transformers', 'onnxruntime-node', 'sharp'],
   },
   async headers() {
     return [

@@ -18,6 +18,7 @@ export interface Voice {
     gender?: string;
   };
   clonedFromAudio?: string;
+  pitchOffset?: number;
   createdAt: string;
   isFavorite?: boolean;
 }

@@ -23,6 +23,7 @@ export const SUB_DIRS = {
   studio: path.join(AUDIO_DIR, 'studio'),
   dubbing: path.join(AUDIO_DIR, 'dubbing'),
   projects: path.join(AUDIO_DIR, 'projects'),
+  speech2speech: path.join(AUDIO_DIR, 'speech2speech'),
 };
 
 export interface LocalDatabase {

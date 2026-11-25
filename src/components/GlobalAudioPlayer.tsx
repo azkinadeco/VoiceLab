@@ -188,10 +188,10 @@ export default function GlobalAudioPlayer({
 
             <a
               href={activeTrack.audioUrl}
-              download={`${activeTrack.voiceName}-${activeTrack.id}.mp3`}
+              download={`${activeTrack.voiceName}-${activeTrack.id}.${activeTrack.audioUrl.endsWith('.wav') ? 'wav' : 'mp3'}`}
               className="flex h-9 w-8 items-center justify-center text-dark-300 hover:text-white"
-              title="Download MP3"
-              aria-label="Download MP3"
+              title="Download Audio"
+              aria-label="Download Audio"
             >
               <Download className="h-3.5 w-3.5" />
             </a>

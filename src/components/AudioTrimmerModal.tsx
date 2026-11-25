@@ -154,6 +154,12 @@ export default function AudioTrimmerModal({
           audioBase64: base64,
           category: 'generations',
           filename: `trimmed-${fileName.replace(/\.[^/.]+$/, '')}.wav`,
+          type: 'tts',
+          text: `Potong Audio (${startTime.toFixed(1)}s – ${endTime.toFixed(1)}s): ${fileName}`,
+          voiceName: 'Audio Trimmer',
+          voiceId: 'audio-trimmer',
+          duration: sliced.duration,
+          model: 'Local Audio Trimmer DSP',
         }),
       });
 
