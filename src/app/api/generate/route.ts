@@ -45,7 +45,7 @@ function generateSrtFromText(text: string, totalDurationSec: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text, voiceId, settings, type = 'tts' } = body;
+    const { text, voiceId, settings, type = 'tts', provider } = body;
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ error: 'Text prompt is required' }, { status: 400 });
@@ -63,7 +63,11 @@ export async function POST(request: NextRequest) {
       speakerBoost: settings?.speakerBoost ?? true,
     };
 
-    const appSettings = getAppSettings();
+    const savedAppSettings = getAppSettings();
+    const appSettings =
+      provider && ['edge-neural', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
+        ? { ...savedAppSettings, ttsProvider: provider }
+        : savedAppSettings;
     const genId = `gen-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
     // Apply pronunciation dictionary rules before synthesis

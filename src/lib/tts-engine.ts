@@ -304,6 +304,116 @@ export function mergeAudioBuffers(buffers: Buffer[]): { buffer: Buffer; format: 
   return { buffer: Buffer.concat(buffers), format: 'mp3' };
 }
 
+function wrapPcmAsWav(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + pcmBuffer.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(pcmBuffer.length, 40);
+  return Buffer.concat([header, pcmBuffer]);
+}
+
+function mapEdgeVoiceToGeminiVoice(voiceEdgeId: string): string {
+  const lower = (voiceEdgeId || '').toLowerCase();
+  if (lower.includes('gadis')) return 'Kore';
+  if (lower.includes('ardi')) return 'Charon';
+  if (lower.includes('siti')) return 'Aoede';
+  if (lower.includes('dimas')) return 'Orus';
+  if (lower.includes('tuti')) return 'Zephyr';
+  if (lower.includes('jajang')) return 'Puck';
+  if (lower.includes('jenny') || lower.includes('aria') || lower.includes('emma') || lower.includes('sonia') || lower.includes('nanami') || lower.includes('sunhi') || lower.includes('zariyah') || lower.includes('xiaoxiao') || lower.includes('denise') || lower.includes('swara')) {
+    return 'Kore';
+  }
+  return 'Puck';
+}
+
+// Gemini 2.5 Flash Preview TTS via Google AI Studio REST API (pure HTTPS, 24kHz PCM -> WAV)
+async function synthesizeGeminiTts(
+  text: string,
+  voiceEdgeId: string,
+  settings: GenerationSettings,
+  apiKey: string
+): Promise<SynthesisResult> {
+  const voiceName = mapEdgeVoiceToGeminiVoice(voiceEdgeId);
+  let promptText = text;
+  if (settings.styleExaggeration >= 45) {
+    promptText = `Say enthusiastically and expressively: ${text}`;
+  } else if (settings.speed >= 1.2) {
+    promptText = `Say at a brisk, energetic pace: ${text}`;
+  } else if (settings.speed <= 0.88) {
+    promptText = `Say calmly and softly: ${text}`;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${encodeURIComponent(
+      apiKey
+    )}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName },
+            },
+          },
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Gemini TTS HTTP ${res.status}: ${errText.slice(0, 160)}`);
+    }
+
+    const data = await res.json();
+    const part = data?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data);
+    const b64 = part?.inlineData?.data;
+    const mime: string = part?.inlineData?.mimeType || '';
+    if (!b64) {
+      throw new Error('Gemini TTS tidak mengembalikan data audio');
+    }
+
+    const rawBuf = Buffer.from(b64, 'base64');
+    if (rawBuf.length < 256) {
+      throw new Error('Gemini TTS mengembalikan audio kosong');
+    }
+
+    // Parse sample rate from mimeType e.g. "audio/L16;codec=pcm;rate=24000"
+    const rateMatch = mime.match(/rate=(\d+)/i);
+    const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+    const isAlreadyWav = rawBuf.slice(0, 4).toString('ascii') === 'RIFF';
+    const wavBuffer = isAlreadyWav ? rawBuf : wrapPcmAsWav(rawBuf, sampleRate, 1, 16);
+    const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
+
+    return {
+      buffer: wavBuffer,
+      duration,
+      format: 'wav',
+      engine: `Gemini 2.5 Flash TTS (${voiceName})`,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Tier 0C / Vercel Primary: FreeTTS Neural REST API (https://freetts.org/developers)
 // Supports all 2,250+ neural voices (id-ID-ArdiNeural, id-ID-GadisNeural, jv-ID-*, su-ID-*, etc.) over pure HTTPS
 async function synthesizeFreeTts(
@@ -445,13 +555,50 @@ export async function synthesizeSpeech(
     }
   }
 
-  // Tier 0C: FreeTTS Neural REST API (auto-active if FREETTS_API_KEY env var or Settings key is provided)
+  const geminiKey = (appSettings.geminiApiKey || process.env.GEMINI_API_KEY || '').trim();
   const freeTtsKey = (appSettings.freeTtsApiKey || process.env.FREETTS_API_KEY || '').trim();
-  if (freeTtsKey) {
+  const preferred = appSettings.ttsProvider;
+
+  // Build ordered cloud provider chain based on user's chosen provider (with automatic fallback if rate-limited!)
+  const tryGemini = async () => {
+    if (!geminiKey) return null;
+    try {
+      return await synthesizeGeminiTts(cleanText, voiceEdgeId, settings, geminiKey);
+    } catch (e: any) {
+      console.warn('Gemini TTS failed, falling back:', e?.message || e);
+      return null;
+    }
+  };
+
+  const tryFreeTts = async () => {
+    if (!freeTtsKey) return null;
     try {
       return await synthesizeFreeTts(cleanText, voiceEdgeId, settings, freeTtsKey);
-    } catch (ftErr: any) {
-      console.warn('FreeTTS API failed, falling back:', ftErr?.message || ftErr);
+    } catch (e: any) {
+      console.warn('FreeTTS API failed, falling back:', e?.message || e);
+      return null;
+    }
+  };
+
+  if (preferred === 'gemini-tts') {
+    const r1 = await tryGemini();
+    if (r1) return r1;
+    const r2 = await tryFreeTts();
+    if (r2) return r2;
+  } else if (preferred === 'freetts-api') {
+    const r1 = await tryFreeTts();
+    if (r1) return r1;
+    const r2 = await tryGemini();
+    if (r2) return r2;
+  } else {
+    // Auto / edge-neural: prefer Gemini if key is set, else FreeTTS if key is set
+    if (geminiKey) {
+      const r1 = await tryGemini();
+      if (r1) return r1;
+    }
+    if (freeTtsKey) {
+      const r2 = await tryFreeTts();
+      if (r2) return r2;
     }
   }
 

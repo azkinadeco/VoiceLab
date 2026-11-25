@@ -116,6 +116,7 @@ export default function TextToSpeech({
     'Halo! Selamat datang di Voice Lab. Pilih aksen suara dan klik Generate untuk mendengar suara manusia neural.'
   );
   const [activeAccentFilter, setActiveAccentFilter] = useState<string>('Indonesian');
+  const [ttsEngine, setTtsEngine] = useState<'auto' | 'gemini-tts' | 'freetts-api'>('auto');
   const [settings, setSettings] = useState<GenerationSettings>(DEFAULT_SETTINGS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -124,11 +125,15 @@ export default function TextToSpeech({
   const [copiedTextNotice, setCopiedTextNotice] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load saved draft on mount if available
+  // Load saved draft & engine preference on mount if available
   useEffect(() => {
     const saved = localStorage.getItem('voicelab_creator_draft');
     if (saved && saved.trim().length > 0) {
       setText(saved);
+    }
+    const savedEngine = localStorage.getItem('voicelab_tts_engine');
+    if (savedEngine === 'auto' || savedEngine === 'gemini-tts' || savedEngine === 'freetts-api') {
+      setTtsEngine(savedEngine);
     }
   }, []);
 
@@ -271,6 +276,7 @@ export default function TextToSpeech({
           voiceId: selectedVoice.id,
           settings,
           type: 'tts',
+          provider: ttsEngine === 'auto' ? undefined : ttsEngine,
         }),
         signal: controller.signal,
       });
@@ -449,7 +455,7 @@ export default function TextToSpeech({
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-1.5 px-3 pt-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
           <button
             type="button"
             onClick={() => setIsTemplateOpen(true)}
@@ -458,6 +464,40 @@ export default function TextToSpeech({
             <LayoutTemplate className="h-4 w-4" />
             Template Jualan
           </button>
+
+          {/* Quick API Engine Switcher: Auto / Gemini / FreeTTS */}
+          <div
+            className="inline-flex h-9 items-center rounded-full bg-white/[0.05] border border-white/[0.08] p-0.5 text-[12px]"
+            title="Pilih mesin API TTS (otomatis fallback jika salah satu limit)"
+          >
+            {(
+              [
+                { id: 'auto', label: 'Auto' },
+                { id: 'gemini-tts', label: '✨ Gemini' },
+                { id: 'freetts-api', label: '⚡ FreeTTS' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  haptic(5);
+                  setTtsEngine(opt.id);
+                  try {
+                    localStorage.setItem('voicelab_tts_engine', opt.id);
+                  } catch {}
+                }}
+                className={`h-8 rounded-full px-2.5 font-semibold transition-all ${
+                  ttsEngine === opt.id
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-dark-300 hover:text-white'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex-1" />
           <button
             type="button"
@@ -629,7 +669,9 @@ export default function TextToSpeech({
             <img src={lastGen.voiceAvatar} alt="" className="h-8 w-8 rounded-full object-cover" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-[14px] font-semibold text-white">{lastGen.voiceName}</div>
-              <div className="text-[12px] text-dark-400">Siap dipakai · {lastGen.duration} detik</div>
+              <div className="truncate text-[12px] text-dark-400">
+                Siap dipakai · {lastGen.duration} detik · {lastGen.model}
+              </div>
             </div>
             <button
               onClick={() => {
