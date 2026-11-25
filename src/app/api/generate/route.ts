@@ -62,10 +62,12 @@ export async function POST(request: NextRequest) {
       styleExaggeration: settings?.styleExaggeration ?? 0,
       speakerBoost: settings?.speakerBoost ?? true,
       emotionStyle: settings?.emotionStyle || undefined,
+      voicevoxSpeakerId: typeof settings?.voicevoxSpeakerId === 'number' ? settings.voicevoxSpeakerId : undefined,
     };
 
     const savedAppSettings = getAppSettings();
     const mergedKeys = {
+      voicevoxUrl: clientKeys?.voicevoxUrl || savedAppSettings.voicevoxUrl,
       geminiApiKey: clientKeys?.geminiApiKey || savedAppSettings.geminiApiKey,
       freeTtsApiKey: clientKeys?.freeTtsApiKey || savedAppSettings.freeTtsApiKey,
       elevenLabsApiKey: clientKeys?.elevenLabsApiKey || savedAppSettings.elevenLabsApiKey,
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
     const appSettings = {
       ...savedAppSettings,
       ...mergedKeys,
-      ...(provider && ['edge-neural', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
+      ...(provider && ['edge-neural', 'voicevox', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
         ? { ttsProvider: provider }
         : {}),
     };
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
       appSettings,
       {
         geminiVoice: targetVoice.geminiVoice,
+        voicevoxSpeakerId: targetVoice.voicevoxSpeakerId,
         actingDirection: targetVoice.actingDirection,
       }
     );

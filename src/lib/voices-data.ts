@@ -128,6 +128,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#fbcfe8', '#f472b6', '#831843', '🎀'),
     voiceIdEdge: 'ja-JP-AoiNeural',
     geminiVoice: 'Zephyr',
+    voicevoxSpeakerId: 1, // ずんだもん (あまあま)
     pitchOffset: 44,
     defaultSpeed: 1.14,
     actingDirection:
@@ -146,6 +147,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#fde047', '#f59e0b', '#78350f', '⚡'),
     voiceIdEdge: 'ja-JP-AoiNeural',
     geminiVoice: 'Laomedeia',
+    voicevoxSpeakerId: 8, // 春日部つむぎ (ノーマル)
     pitchOffset: 22,
     defaultSpeed: 1.24,
     actingDirection:
@@ -164,6 +166,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#fb923c', '#ea580c', '#7c2d12', '😤'),
     voiceIdEdge: 'ja-JP-MayuNeural',
     geminiVoice: 'Autonoe',
+    voicevoxSpeakerId: 6, // 四国めたん (ツンツン)
     pitchOffset: 20,
     defaultSpeed: 1.16,
     actingDirection:
@@ -182,6 +185,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#f9a8d4', '#ec4899', '#831843', '🌸'),
     voiceIdEdge: 'ja-JP-NanamiNeural',
     geminiVoice: 'Vindemiatrix',
+    voicevoxSpeakerId: 0, // 四国めたん (あまあま)
     pitchOffset: 8,
     defaultSpeed: 0.88,
     actingDirection:
@@ -200,6 +204,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#f87171', '#dc2626', '#7f1d1d', '🔥'),
     voiceIdEdge: 'ja-JP-MayuNeural',
     geminiVoice: 'Kore',
+    voicevoxSpeakerId: 29, // No.7 (ノーマル)
     pitchOffset: -18,
     defaultSpeed: 1.28,
     actingDirection:
@@ -218,6 +223,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#f472b6', '#be123c', '#4c0519', '💋'),
     voiceIdEdge: 'ja-JP-NanamiNeural',
     geminiVoice: 'Callirrhoe',
+    voicevoxSpeakerId: 4, // 四国めたん (セクシー)
     pitchOffset: -20,
     defaultSpeed: 0.78,
     actingDirection:
@@ -236,6 +242,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#93c5fd', '#3b82f6', '#1e3a8a', '💧'),
     voiceIdEdge: 'ja-JP-ShioriNeural',
     geminiVoice: 'Leda',
+    voicevoxSpeakerId: 36, // 四国めたん (ささやき)
     pitchOffset: -4,
     defaultSpeed: 0.72,
     actingDirection:
@@ -254,6 +261,7 @@ export const PRESET_VOICES: Voice[] = [
     avatarUrl: createOrbSvgDataUri('#c084fc', '#9333ea', '#3b0764', '👑'),
     voiceIdEdge: 'ja-JP-ShioriNeural',
     geminiVoice: 'Gacrux',
+    voicevoxSpeakerId: 17, // 九州そら (セクシー)
     pitchOffset: -30,
     defaultSpeed: 0.88,
     actingDirection:

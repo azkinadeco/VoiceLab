@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       freeTtsApiKey: clientKeys?.freeTtsApiKey || savedSettings.freeTtsApiKey,
       elevenLabsApiKey: clientKeys?.elevenLabsApiKey || savedSettings.elevenLabsApiKey,
       openAiApiKey: clientKeys?.openAiApiKey || savedSettings.openAiApiKey,
-      ...(provider && ['edge-neural', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
+      ...(provider && ['edge-neural', 'voicevox', 'gemini-tts', 'freetts-api', 'elevenlabs-api', 'openai-api'].includes(provider)
         ? { ttsProvider: provider }
         : {}),
     };
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
       appSettings,
       {
         geminiVoice: voice.geminiVoice,
+        voicevoxSpeakerId: voice.voicevoxSpeakerId,
         actingDirection: voice.actingDirection,
       }
     );

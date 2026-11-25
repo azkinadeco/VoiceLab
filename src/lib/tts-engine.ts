@@ -392,7 +392,63 @@ const EMOTION_DIRECTIONS: Record<string, { cue: string; speedMul: number; pitchA
 
 export interface VoiceSynthesisHints {
   geminiVoice?: string;
+  voicevoxSpeakerId?: number;
   actingDirection?: string;
+}
+
+// Local VOICEVOX Engine (http://127.0.0.1:50021) — 50+ authentic Japanese anime voices, 0 watermark, 0 quota limit
+async function synthesizeVoicevox(
+  text: string,
+  speakerId: number,
+  settings: GenerationSettings,
+  baseUrl: string
+): Promise<SynthesisResult> {
+  const cleanUrl = baseUrl.replace(/\/+$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const queryRes = await fetch(
+      `${cleanUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(String(speakerId))}`,
+      { method: 'POST', signal: controller.signal }
+    );
+    if (!queryRes.ok) {
+      throw new Error(`VOICEVOX audio_query HTTP ${queryRes.status}`);
+    }
+    const audioQuery = await queryRes.json();
+
+    // Map our sliders to VOICEVOX AudioQuery prosody parameters
+    audioQuery.speedScale = Math.max(0.5, Math.min(2.0, settings.speed));
+    audioQuery.pitchScale = Math.max(-0.15, Math.min(0.15, settings.pitch / 200));
+    audioQuery.intonationScale = Math.max(0.5, Math.min(2.0, 1.0 + (settings.styleExaggeration / 100) * 0.6));
+    audioQuery.volumeScale = settings.speakerBoost ? 1.15 : 1.0;
+
+    const synthRes = await fetch(
+      `${cleanUrl}/synthesis?speaker=${encodeURIComponent(String(speakerId))}`,
+      {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', Accept: 'audio/wav' },
+        body: JSON.stringify(audioQuery),
+      }
+    );
+    if (!synthRes.ok) {
+      throw new Error(`VOICEVOX synthesis HTTP ${synthRes.status}`);
+    }
+    const wavBuffer = Buffer.from(await synthRes.arrayBuffer());
+    if (wavBuffer.length < 256) {
+      throw new Error('VOICEVOX mengembalikan audio kosong');
+    }
+
+    const duration = estimateWavDurationSec(wavBuffer) ?? estimateDurationSec(text, settings.speed);
+    return {
+      buffer: wavBuffer,
+      duration,
+      format: 'wav',
+      engine: `VOICEVOX Lokal (Speaker #${speakerId})`,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Gemini 2.5 Flash Preview TTS via Google AI Studio REST API (pure HTTPS, 24kHz PCM -> WAV)
@@ -640,9 +696,28 @@ export async function synthesizeSpeech(
 
   const geminiKey = (appSettings.geminiApiKey || process.env.GEMINI_API_KEY || '').trim();
   const freeTtsKey = (appSettings.freeTtsApiKey || process.env.FREETTS_API_KEY || '').trim();
+  const voicevoxUrl = (appSettings.voicevoxUrl || process.env.VOICEVOX_URL || 'http://127.0.0.1:50021').trim();
   const preferred = appSettings.ttsProvider;
 
   let fallbackNotice: string | undefined;
+
+  // If user explicitly chose VOICEVOX, call local VOICEVOX engine first (and surface clear error if offline)
+  if (preferred === 'voicevox') {
+    const speakerId =
+      typeof settings.voicevoxSpeakerId === 'number'
+        ? settings.voicevoxSpeakerId
+        : typeof hints?.voicevoxSpeakerId === 'number'
+          ? hints.voicevoxSpeakerId
+          : 0;
+    try {
+      return await synthesizeVoicevox(cleanText, speakerId, settings, voicevoxUrl);
+    } catch (vvErr: any) {
+      console.warn('VOICEVOX local engine error:', vvErr?.message || vvErr);
+      throw new Error(
+        `VOICEVOX belum berjalan di ${voicevoxUrl}. Buka aplikasi VOICEVOX di Mac Anda terlebih dahulu, lalu coba lagi.`
+      );
+    }
+  }
 
   // Build ordered cloud provider chain based on user's chosen provider (with transparent fallback notices!)
   const tryGemini = async () => {

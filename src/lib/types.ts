@@ -12,6 +12,7 @@ export interface Voice {
   avatarEmoji?: string;
   voiceIdEdge: string;
   geminiVoice?: string;
+  voicevoxSpeakerId?: number;
   actingDirection?: string;
   labels: {
     age?: 'young' | 'middle-aged' | 'old';
@@ -34,6 +35,7 @@ export interface GenerationSettings {
   styleExaggeration: number; // 0 to 100
   speakerBoost: boolean;
   emotionStyle?: string; // e.g. 'gentle' | 'cheerful' | 'sad' | 'rough' | 'angry' | 'mature' | 'seductive' | 'cold' | 'battle'
+  voicevoxSpeakerId?: number;
 }
 
 export interface Generation {
@@ -130,7 +132,8 @@ export interface DubbingProject {
 }
 
 export interface AppSettings {
-  ttsProvider: 'edge-neural' | 'gemini-tts' | 'freetts-api' | 'elevenlabs-api' | 'openai-api' | 'browser-speech';
+  ttsProvider: 'edge-neural' | 'voicevox' | 'gemini-tts' | 'freetts-api' | 'elevenlabs-api' | 'openai-api' | 'browser-speech';
+  voicevoxUrl?: string;
   geminiApiKey?: string;
   freeTtsApiKey?: string;
   elevenLabsApiKey?: string;

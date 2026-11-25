@@ -139,7 +139,14 @@ export default function TextToSpeech({
     'Halo! Selamat datang di Voice Lab, pilih suara dan klik Generate.'
   );
   const [activeAccentFilter, setActiveAccentFilter] = useState<string>('Indonesian');
-  const [ttsEngine, setTtsEngine] = useState<'auto' | 'gemini-tts' | 'freetts-api'>('auto');
+  const [ttsEngine, setTtsEngine] = useState<'auto' | 'gemini-tts' | 'freetts-api' | 'voicevox'>('auto');
+  const [vvStatus, setVvStatus] = useState<{
+    checked: boolean;
+    online: boolean;
+    version?: string;
+    speakers: { id: number; label: string }[];
+  }>({ checked: false, online: false, speakers: [] });
+  const [vvSpeakerId, setVvSpeakerId] = useState<number | undefined>(undefined);
   const [settings, setSettings] = useState<GenerationSettings>(DEFAULT_SETTINGS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -156,10 +163,31 @@ export default function TextToSpeech({
       setText(saved);
     }
     const savedEngine = localStorage.getItem('voicelab_tts_engine');
-    if (savedEngine === 'auto' || savedEngine === 'gemini-tts' || savedEngine === 'freetts-api') {
+    if (savedEngine === 'auto' || savedEngine === 'gemini-tts' || savedEngine === 'freetts-api' || savedEngine === 'voicevox') {
       setTtsEngine(savedEngine);
     }
   }, []);
+
+  const checkVoicevox = async () => {
+    try {
+      const res = await fetch('/api/voicevox');
+      const data = await res.json();
+      setVvStatus({
+        checked: true,
+        online: Boolean(data.online),
+        version: data.version,
+        speakers: Array.isArray(data.speakers) ? data.speakers : [],
+      });
+    } catch {
+      setVvStatus({ checked: true, online: false, speakers: [] });
+    }
+  };
+
+  useEffect(() => {
+    if (ttsEngine === 'voicevox') {
+      checkVoicevox();
+    }
+  }, [ttsEngine]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -316,7 +344,10 @@ export default function TextToSpeech({
         body: JSON.stringify({
           text: text.trim(),
           voiceId: selectedVoice.id,
-          settings,
+          settings: {
+            ...settings,
+            voicevoxSpeakerId: ttsEngine === 'voicevox' ? vvSpeakerId : undefined,
+          },
           type: 'tts',
           provider: ttsEngine === 'auto' ? undefined : ttsEngine,
           clientKeys,
@@ -461,17 +492,18 @@ export default function TextToSpeech({
           </button>
         </div>
 
-        {/* Clean single-row API Engine Switcher + Quick Voices */}
+        {/* Clean single-row API Engine Switcher: Auto / Gemini / FreeTTS / VOICEVOX */}
         <div className="flex items-center gap-2 pt-1.5 px-1">
           <div
-            className="grid grid-cols-3 w-full sm:w-auto sm:inline-grid items-center rounded-xl bg-white/[0.05] p-1 text-[12px]"
-            title="Pilih mesin API TTS (otomatis fallback jika limit)"
+            className="grid grid-cols-4 w-full sm:w-auto sm:inline-grid items-center rounded-xl bg-white/[0.05] p-1 text-[11.5px]"
+            title="Pilih mesin TTS (VOICEVOX = 50+ suara anime lokal tanpa limit)"
           >
             {(
               [
                 { id: 'auto', label: 'Auto' },
                 { id: 'gemini-tts', label: '✨ Gemini' },
                 { id: 'freetts-api', label: '⚡ FreeTTS' },
+                { id: 'voicevox', label: '🎌 VOICEVOX' },
               ] as const
             ).map((opt) => (
               <button
@@ -480,13 +512,19 @@ export default function TextToSpeech({
                 onClick={() => {
                   haptic(5);
                   setTtsEngine(opt.id);
+                  if (opt.id === 'voicevox' && selectedVoice.accent !== 'Anime JP') {
+                    const firstAnime = voices.find((v) => v.accent === 'Anime JP');
+                    if (firstAnime) onSelectVoice(firstAnime);
+                  }
                   try {
                     localStorage.setItem('voicelab_tts_engine', opt.id);
                   } catch {}
                 }}
-                className={`h-9 rounded-lg px-2.5 font-semibold transition-all active:scale-95 ${
+                className={`h-9 rounded-lg px-2 font-semibold whitespace-nowrap transition-all active:scale-95 ${
                   ttsEngine === opt.id
-                    ? 'bg-white text-black shadow-sm'
+                    ? opt.id === 'voicevox'
+                      ? 'bg-emerald-400 text-black shadow-sm'
+                      : 'bg-white text-black shadow-sm'
                     : 'text-dark-300 hover:text-white'
                 }`}
               >
@@ -514,6 +552,58 @@ export default function TextToSpeech({
             </div>
           )}
         </div>
+        {/* VOICEVOX Local Status & 50+ Live Speaker Picker */}
+        {ttsEngine === 'voicevox' && (
+          <div className="mt-1 rounded-xl bg-white/[0.04] px-3 py-2 text-[12px] animate-fadeIn">
+            {vvStatus.online ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="flex items-center gap-1.5 text-emerald-300 font-semibold shrink-0">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  VOICEVOX v{vvStatus.version} ({vvStatus.speakers.length} gaya)
+                </span>
+                <select
+                  value={vvSpeakerId ?? ''}
+                  onChange={(e) => setVvSpeakerId(e.target.value === '' ? undefined : Number(e.target.value))}
+                  className="flex-1 min-w-0 h-9 rounded-lg bg-black/40 px-2.5 text-[12.5px] text-white"
+                >
+                  <option value="">Otomatis ikuti karakter ({selectedVoice.name})</option>
+                  {vvStatus.speakers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      #{s.id} · {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-amber-200">
+                  VOICEVOX lokal belum aktif (port 50021). Buka app <b>VOICEVOX</b> di Mac Anda.
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href="https://voicevox.hiroshiba.jp/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                  >
+                    Unduh Gratis
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptic(6);
+                      checkVoicevox();
+                      toast('Mengecek VOICEVOX…', 'info');
+                    }}
+                    className="rounded-lg bg-white/10 px-2.5 py-1 text-[11.5px] font-semibold text-white hover:bg-white/20"
+                  >
+                    Cek Ulang
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ================= MINIMAL COMPOSER CARD ================= */}
